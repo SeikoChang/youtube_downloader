@@ -1,0 +1,11 @@
+{
+    "python.linting.pylintEnabled": true,
+    "terminal.integrated.shellArgs.windows"
+    : [
+    "-NoExit"
+    , 
+    "/c"
+    , 
+    "chcp 65001"
+    ]
+}
