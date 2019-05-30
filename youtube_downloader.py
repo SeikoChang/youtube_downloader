@@ -8,7 +8,10 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys, os, tempfile, logging, argparse
+import sys
+import os
+import tempfile
+import logging
 import argparse
 import time
 import datetime
@@ -316,6 +319,12 @@ def get_arguments():
         )
     )
     parser.add_argument(
+        "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
+            "identify the file which stored The YouTube /watch url(s)"
+        )
+    )
+
+    parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s ' + __version__, help=(
             'Get current version of Pytube'
         )
@@ -337,19 +346,13 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if replace the exist file"
-        )
-    )
-    parser.add_argument(
         "-o", "--out", action="store", type=str, help=(
             "identify the destnation folder/filename to store the file"
         )
     )
-
     parser.add_argument(
-        "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
-            "identify the file which stored The YouTube /watch url(s)"
+        "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
+            "idenfify if replace the exist file"
         )
     )
     parser.add_argument(
@@ -357,6 +360,7 @@ def get_arguments():
             "retry time when get file failed"
         )
     )
+
     parser.add_argument(
         "-lf", "--logfile", action="store", type=str, default="{name}.{ext}".format(name=filename, ext='log'), help=(
             "identify the log file name"
@@ -377,6 +381,7 @@ def get_arguments():
             "set proxy"
         )
     )
+
     parser.add_argument(
         "-qt", "--quality", type=str, choices=['HIGH', 'NORMAL', 'LOW', 'ALL'], help=(
             "choose the quality of video to download"
@@ -387,6 +392,7 @@ def get_arguments():
             "choose only video/audio or video and audio together"
         )
     )
+
     parser.add_argument(
         "-cap", "--caption", action="store_true", help=(
             "download all available cpation for all languages if available"
@@ -412,6 +418,7 @@ def download(url, itag=18, out=None, replace=True, proxies=None):
     """
     # TODO(nficano): allow download target to be specified
     # TODO(nficano): allow dash itags to be selected
+    rtv = None
     yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
     stream = yt.streams.get_by_itag(itag)
     filename = to_unicode(stream.default_filename)
@@ -467,11 +474,12 @@ def download(url, itag=18, out=None, replace=True, proxies=None):
         sys.stdout.write('\n')
         shutil.move(tmpfile, filename)
         logger.info("File = [{0}] Saved".format(filename))
+        rtv = filename
     except KeyboardInterrupt:
         sys.exit()
 
     sys.stdout.write('\n')
-    return True
+    return rtv
 
 
 def main():
@@ -562,7 +570,8 @@ def main():
 def unitest():
     base = os.path.basename(__file__)
     filename, file_extension = os.path.splitext(base)
-    url = 'https://www.youtube.com/watch?v=F1fqet9V494'
+    #url = 'https://www.youtube.com/watch?v=F1fqet9V494'
+    url = 'https://www.youtube.com/watch?v=xwsYvBYZcx4'
 
     def test1():
         args.list = True
