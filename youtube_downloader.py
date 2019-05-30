@@ -22,6 +22,7 @@ import subprocess
 import shutil
 import ntpath
 import re
+import operator
 
 from pytube import __version__
 from pytube import YouTube
@@ -116,30 +117,31 @@ def get_target_itags(url, quality='NORMAL', mode='VIDEO_AUDIO'):
         elif mode.upper() == 'AUDIO':
             streams = yt.streams.filter(only_audio=True).order_by('itag').all()
         elif mode.upper() == 'ALL':
-            streams= yt.streams.all()
+            streams = yt.streams.all()
         else:
             return itags
 
+        p = re.compile('.*itag=\"(.*)\" mime_type=.*')
+        rank = {}
+        for stream in streams:
+            filesize = stream.filesize
+            result = p.search(str(stream))
+            if result:
+                itag = result.group(1)
+                rank[itag] = int(filesize)
+
+        sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
+        
         if quality.upper() == 'HIGH':
-            streams = [streams[-1]]
+            itags = [sorted_rank[-1][0]]
         elif quality.upper() == 'NORMAL':
-            streams = [median(streams)]
+            itags = [median(sorted_rank)[0]]
         elif quality.upper() == 'LOW':
-            streams = [streams[0]]
+            itags = [sorted_rank[0][0]]
         elif quality.upper() == 'ALL':
-            pass
+            itags = rank.keys()
         else:
             return itags
-
-        if streams:
-            itags = []
-            for stream in streams:
-                print(stream)
-                p = re.compile('.*itag=\"(.*)\" mime_type=.*')
-                result = p.search(str(stream))
-                if result:
-                    itag = result.group(1)
-                    itags.append(itag)
 
     return itags
 
