@@ -358,6 +358,11 @@ def get_arguments():
         )
     )
     parser.add_argument(
+        "-sp", "--skip", type=str2bool, nargs='?', const=True, help=(
+            "idenfify if replace the exist file"
+        )
+    )
+    parser.add_argument(
         "-r", "--retry",action="store", type=int, default=1, help=(
             "retry time when get file failed"
         )
@@ -402,6 +407,7 @@ def get_arguments():
     )
 
     parser.set_defaults(replace=True)
+    parser.set_defaults(skip=True)
     parser.set_defaults(quiet=False)
     args = parser.parse_args(sys.argv[1:])
     print(args)
@@ -411,7 +417,7 @@ def get_arguments():
     return args
 
 
-def download(url, itag=18, out=None, replace=True, proxies=None):
+def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     """Start downloading a YouTube video.
     :param str url:
         A valid YouTube watch URL.
@@ -425,6 +431,8 @@ def download(url, itag=18, out=None, replace=True, proxies=None):
     stream = yt.streams.get_by_itag(itag)
     filename = to_unicode(stream.default_filename)
     filesize = stream.filesize
+    logger.info('Youtube filename = [%s]' % filename)
+    logger.info('Youtube filesize = [%s]' % filesize)
     logger.info('\n{title} |\n{description} |\n\n{views} views | {rating} rating | {length} secs'.format(
         title=yt.title,
         description=yt.description,
@@ -456,12 +464,23 @@ def download(url, itag=18, out=None, replace=True, proxies=None):
         if not os.path.exists(outdir):
             os.makedirs(outdir)
         filename = os.path.join(outdir, filename)
-    # add numeric ' (x)' suffix if filename already exists
-    if os.path.exists(filename) and not replace:
-        filename = filename_fix_existing(filename)
     filename = to_unicode(filename)
+
+    # check file existance and decide skip or not
+    # add numeric ' (x)' suffix if filename already exists
+    if os.path.exists(filename):
+        fsize = os.path.getsize(filename)
+        logger.info('filename = [%s] filesize = [%s] already exists in system' % (filename, fsize))
+        if not replace:
+            filename = filename_fix_existing(filename)
+        elif skip:
+            if fsize == filesize:
+                return filename
+
     name, ext = os.path.splitext(filename)
     logger.info('target local filename = [%s]' % filename)
+    logger.info('target local filesize = [%s]' % filesize)
+
     # create tmp file 
     (fd, tmpfile) = tempfile.mkstemp(suffix=ext, prefix="", dir='.')
     tmpfile = to_unicode(tmpfile)
@@ -478,7 +497,7 @@ def download(url, itag=18, out=None, replace=True, proxies=None):
         logger.info("File = [{0}] Saved".format(filename))
         rtv = filename
     except KeyboardInterrupt:
-        sys.exit()
+        sys.exit(1)
 
     sys.stdout.write('\n')
     return rtv
@@ -560,7 +579,7 @@ def main():
                         replace = False
                     for i, itag in enumerate(itags):
                         logger.debug('itag = [%s]' % itag)
-                        download(url=url, itag=itag, out=args.out, replace=replace, proxies=proxy_params)
+                        download(url=url, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
                     else:
                         break
                 except:
