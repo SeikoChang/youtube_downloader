@@ -44,7 +44,7 @@ def get_captions(url):
     yt = YouTube(url)
     captions = yt.captions.all()
     if captions:
-        logger.info('captions = [%s] found' % captions)
+        logger.info('captions = %s' % captions)
     else:
         logger.debug('no any captions found!')
     for caption in captions:
@@ -471,11 +471,14 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     if os.path.exists(filename):
         fsize = os.path.getsize(filename)
         logger.info('filename = [%s] filesize = [%s] already exists in system' % (filename, fsize))
-        if not replace:
-            filename = filename_fix_existing(filename)
-        elif skip:
-            if fsize == filesize:
+        if fsize == filesize:
+            if skip:
                 return filename
+            elif not replace:
+                filename = filename_fix_existing(filename)
+        else:
+            if replace:
+                filename = filename_fix_existing(filename)
 
     name, ext = os.path.splitext(filename)
     logger.info('target local filename = [%s]' % filename)
