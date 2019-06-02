@@ -16,6 +16,7 @@ def get_best_audio_video_from_youtube(url):
     youtube_downloader.display_streams(url=url)
     youtube_downloader.get_captions(url=url)
 
+    video = audio = None
     try:
         itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='VIDEO')
         logger.info('Get Best Video itags = [%s]' % itags[0])
@@ -24,7 +25,8 @@ def get_best_audio_video_from_youtube(url):
         #shutil.move(video, u'{}.video'.format(video))
         #video = u'{}.video'.format(video)
         #video = youtube_downloader.to_unicode(video)
-        logger.info('Get Best Video = [%s]' % video)
+        filesize = os.path.getsize(video)
+        logger.info('Best Video = [%s] Size = [%s] Downloaded successfully' % (video, filesize))
     except:
         pass
 
@@ -36,7 +38,8 @@ def get_best_audio_video_from_youtube(url):
         #shutil.move(audio, u'{}.audio'.format(audio))
         #audio = u'{}.audio'.format(audio)
         #audio = youtube_downloader.to_unicode(audio)
-        logger.info('Get Best Audio = [%s]' % audio)
+        filesize = os.path.getsize(audio)
+        logger.info('Best Audio = [%s] Size = [%s] Downloaded successfully' % (audio, filesize))
     except:
         pass
 
@@ -237,7 +240,7 @@ def main():
             for i in range(1, args.retry+1):
                 try:
                     audio, video = get_best_audio_video_from_youtube(url)
-                    if args.join:
+                    if all([audio, video, args.join]):
                         if audio_video_join(audio=audio, video=video, out=args.out, keep=args.keep, replace=args.replace):
                             break
                 except:
