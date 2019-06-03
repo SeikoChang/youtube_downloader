@@ -41,26 +41,29 @@ logger = logging.getLogger(module)
 
 
 def get_captions(url):
+    captions = None
     yt = YouTube(url)
-    captions = yt.captions.all()
-    if captions:
+    try:
+        captions = yt.captions.all()
         logger.info('captions = %s' % captions)
-    else:
+        for caption in captions:
+            p = re.compile('<Caption lang=".*" code="(.*)">')
+            result = p.search(str(caption))
+            if result:
+                code = result.group(1)
+                logger.debug('captions code = [%s]' % code)
+                cap = caption.generate_srt_captions()
+                title = yt.title
+                stream = yt.streams.first()
+                filename = stream.default_filename
+                name, ext = os.path.splitext(filename)
+                fp = to_unicode('{}_{}.txt'.format(name, code))
+                with open(fp, 'wb') as fh:
+                    fh.write(cap.encode('utf8'))
+    except:
         logger.debug('no any captions found!')
-    for caption in captions:
-        p = re.compile('<Caption lang=".*" code="(.*)">')
-        result = p.search(str(caption))
-        if result:
-            code = result.group(1)
-            logger.debug('captions code = [%s]' % code)
-            cap = caption.generate_srt_captions()
-            title = yt.title
-            stream = yt.streams.first()
-            filename = stream.default_filename
-            name, ext = os.path.splitext(filename)
-            fp = to_unicode('{}_{}.txt'.format(name, code))
-            with open(fp, 'wb') as fh:
-                fh.write(cap.encode('utf8'))
+
+    return captions
 
 
 def build_playback_report(url):
