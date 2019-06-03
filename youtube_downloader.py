@@ -254,6 +254,7 @@ def filename_fix_existing(filename):
     try:
         name, ext = tail.rsplit('.', 1)
     except:
+        # handle those filename without extention name
         name = tail.rsplit(os.sep, 1)[0]
         ext = None
     names = [x for x in os.listdir(head) if x.startswith(name)]
@@ -473,12 +474,24 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
         logger.info('filename = [%s] filesize = [%s] already exists in system' % (filename, fsize))
         if fsize == filesize:
             if skip:
+                logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (filename, fsize))
                 return filename
             elif not replace:
                 filename = filename_fix_existing(filename)
         else:
-            if replace:
-                filename = filename_fix_existing(filename)
+            name, ext = os.path.splitext(filename)
+            filename = filename_fix_existing(filename)
+            #TODO this workaround, need remove after
+            # give second chance
+            if skip:
+                try:
+                    oldfilename = '{}{}{}'.format(name, '_(1)', ext)
+                    fsize = os.path.getsize(oldfilename)
+                    if fsize == filesize:
+                        logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (oldfilename, fsize))
+                        return oldfilename
+                except:
+                    pass
 
     name, ext = os.path.splitext(filename)
     logger.info('target local filename = [%s]' % filename)
