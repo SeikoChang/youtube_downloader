@@ -36,14 +36,48 @@ else:
     import urlparse
 
 
-module = sys.modules['__main__'].__file__
-logger = logging.getLogger(module)
+logger = logging.getLogger(__name__)
+
+
+def set_logger(logfile=None, verbosity='WARNING', quiet=False):
+    LogLevel = loglevel_converter(verbosity)
+    formatter = '%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s'
+
+    logging.basicConfig(
+                    level=LogLevel,
+                    format=formatter,
+                    datefmt='%a %b %d %H:%M:%S CST %Y'
+                    )
+
+    logger = logging.getLogger(__name__)
+    logger.handlers = []
+    logger.setLevel(LogLevel)
+
+    # new file handler
+    if logfile:
+        handler = logging.FileHandler(filename=logfile, mode='a+', encoding='utf-8', delay=True)
+        handler.setLevel(LogLevel)
+        # set logging format
+        formatter = logging.Formatter(formatter)
+        handler.setFormatter(formatter)
+        # add the handlers to the logger
+        logger.addHandler(handler)
+
+    if quiet:
+        logging.disable(logging.CRITICAL)
+    else:
+        logging.disable(logging.NOTSET) 
+
+    #module = sys.modules['__main__'].__file__
+    #logger = logging.getLogger(module)
+
+    return logger
 
 
 def get_captions(url):
     captions = None
     try:
-    yt = YouTube(url)
+        yt = YouTube(url)
         captions = yt.captions.all()
         logger.info('captions = %s' % captions)
         for caption in captions:
@@ -102,10 +136,10 @@ def display_streams(url):
     """
     streams = []
     try:
-    yt = YouTube(url)
-    for stream in yt.streams.all():
-        streams.append(stream)
-        print(stream)
+        yt = YouTube(url)
+        for stream in yt.streams.all():
+            streams.append(stream)
+            print(stream)
     except:
         logger.error('Unable to list all streams from Video = [%s]' % url)
     
@@ -527,38 +561,11 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
 
 def main():
     """Command line application to download youtube videos."""
-    LogLevel = loglevel_converter(args.verbosity)
-    formatter = '%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s'
-
-    logger.handlers = []
-    logger.setLevel(LogLevel)
-
-    logging.basicConfig(
-                    level=LogLevel,
-                    format=formatter,
-                    datefmt='%a %b %d %H:%M:%S CST %Y'
-                    )
-
-    # new file handler
-    if args.logfile:
-        handler = logging.FileHandler(filename=args.logfile, mode='a+', encoding='utf-8', delay=True)
-        handler.setLevel(LogLevel)
-        # set logging format
-        formatter = logging.Formatter(formatter)
-        handler.setFormatter(formatter)
-        # add the handlers to the logger
-        logger.addHandler(handler)
-
-    if args.quiet:
-        logging.disable(logging.CRITICAL)
-
+    logger = set_logger(logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet)
     logger.debug('System out encoding = [%s]' % sys.stdout.encoding)
 
     if not (args.url or os.path.exists(args.file)):
         sys.exit(1)
-
-    base = os.path.basename(__file__)
-    filename, file_extension = os.path.splitext(base)
 
     if args.proxy:
         logger.info('via proxy = [%s]' % args.proxy)
@@ -644,4 +651,5 @@ def unitest():
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
     #unitest()
-    main()               
+    sys.exit(main())
+

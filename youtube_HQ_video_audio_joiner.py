@@ -10,6 +10,44 @@ import ffmpeg
 import youtube_downloader
 
 
+logger = logging.getLogger(__name__)
+
+
+def set_logger(logfile=None, verbosity='WARNING', quiet=False):
+    LogLevel = youtube_downloader.loglevel_converter(verbosity)
+    formatter = '%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s'
+
+    logging.basicConfig(
+                    level=LogLevel,
+                    format=formatter,
+                    datefmt='%a %b %d %H:%M:%S CST %Y'
+                    )
+
+    logger = logging.getLogger(__name__)
+    logger.handlers = []
+    logger.setLevel(LogLevel)
+
+    # new file handler
+    if logfile:
+        handler = logging.FileHandler(filename=logfile, mode='a+', encoding='utf-8', delay=True)
+        handler.setLevel(LogLevel)
+        # set logging format
+        formatter = logging.Formatter(formatter)
+        handler.setFormatter(formatter)
+        # add the handlers to the logger
+        logger.addHandler(handler)
+
+    if quiet:
+        logging.disable(logging.CRITICAL)
+    else:
+        logging.disable(logging.NOTSET) 
+
+    #module = sys.modules['__main__'].__file__
+    #logger = logging.getLogger(module)
+
+    return logger
+
+
 def get_best_audio_video_from_youtube(url):
     youtube_downloader.display_streams(url=url)
     youtube_downloader.get_captions(url=url)
@@ -183,40 +221,6 @@ def get_arguments():
     return args
 
 
-def set_logger():
-    module = sys.modules['__main__'].__file__
-    logger = logging.getLogger(module)
-
-    LogLevel = youtube_downloader.loglevel_converter(args.verbosity)
-    formatter = '%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s'
-
-    logger.handlers = []
-    logger.setLevel(LogLevel)
-
-    logging.basicConfig(
-                    level=LogLevel,
-                    format=formatter,
-                    datefmt='%a %b %d %H:%M:%S CST %Y'
-                    )
-
-    # new file handler
-    if args.logfile:
-        handler = logging.FileHandler(filename=args.logfile, mode='a+', encoding='utf-8', delay=True)
-        handler.setLevel(LogLevel)
-        # set logging format
-        formatter = logging.Formatter(formatter)
-        handler.setFormatter(formatter)
-        # add the handlers to the logger
-        logger.addHandler(handler)
-
-    if args.quiet:
-        logging.disable(logging.CRITICAL)
-    else:
-        logging.disable(logging.NOTSET)
-
-    return logger
-
-
 def unitest():
     url = 'https://www.youtube.com/watch?v=a_xayPjVec0'
     audio, video = get_best_audio_video_from_youtube(url=url)
@@ -225,6 +229,7 @@ def unitest():
 
 def main():
     """Command line application to download and join youtube HQ video and audio."""
+    logger = set_logger(logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet)
     logger.debug('System out encoding = [%s]' % sys.stdout.encoding)
 
     if not (args.url or os.path.exists(args.file)):
@@ -263,8 +268,7 @@ def main():
 
 
 if __name__ == "__main__":  # Only run if this file is called directly
-    args = get_arguments()
-    logger = set_logger()
-    
     #unitest()
-    main()               
+    args = get_arguments()
+    sys.exit(main())
+
