@@ -42,8 +42,8 @@ logger = logging.getLogger(module)
 
 def get_captions(url):
     captions = None
-    yt = YouTube(url)
     try:
+    yt = YouTube(url)
         captions = yt.captions.all()
         logger.info('captions = %s' % captions)
         for caption in captions:
@@ -61,7 +61,7 @@ def get_captions(url):
                 with open(fp, 'wb') as fh:
                     fh.write(cap.encode('utf8'))
     except:
-        logger.debug('no any captions found!')
+        logger.warning('no any captions found!')
 
     return captions
 
@@ -101,10 +101,13 @@ def display_streams(url):
         A valid YouTube watch URL.
     """
     streams = []
+    try:
     yt = YouTube(url)
     for stream in yt.streams.all():
         streams.append(stream)
         print(stream)
+    except:
+        logger.error('Unable to list all streams from Video = [%s]' % url)
     
     return streams
 
