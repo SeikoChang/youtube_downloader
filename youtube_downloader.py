@@ -366,6 +366,11 @@ def get_arguments():
             "identify the file which stored The YouTube /watch url(s)"
         )
     )
+    parser.add_argument(
+        "-lkp", "--listkeep", type=str2bool, nargs='?', const=False, help=(
+            "idenfify if keep item in -f --file {file} after successfully download file"
+        )
+    )
 
     parser.add_argument(
         '-v', '--version', action='version', version='%(prog)s ' + __version__, help=(
@@ -447,6 +452,7 @@ def get_arguments():
         )
     )
 
+    parser.set_defaults(listkeep=False)
     parser.set_defaults(replace=True)
     parser.set_defaults(skip=True)
     parser.set_defaults(quiet=False)
@@ -608,7 +614,16 @@ def main():
                         replace = False
                     for i, itag in enumerate(itags):
                         logger.debug('itag = [%s]' % itag)
-                        download(url=url, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
+                        filename = download(url=url, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
+                        if filename:
+                            logger.info("Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
+                            if  args.file and (not args.listkeep):
+                                with open(args.file, "r") as f:
+                                    lines = f.readlines()
+                                with open(args.file, "w") as f:
+                                    for line in lines:
+                                        if line != url:
+                                            f.write(line)
                     else:
                         break
                 except:
