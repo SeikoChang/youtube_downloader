@@ -5,6 +5,7 @@ import subprocess
 import ntpath
 import logging
 import argparse
+import traceback
 import tempfile
 import ffmpeg
 import youtube_downloader
@@ -48,36 +49,42 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     return logger
 
 
-def get_best_audio_video_from_youtube(url):
+def get_best_audio_video_from_youtube(url, retry=3):
     youtube_downloader.display_streams(url=url)
     youtube_downloader.get_captions(url=url)
 
     video = audio = None
-    try:
-        itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='VIDEO')
-        logger.info('Get Best Video itags = [%s]' % itags[0])
-        video = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
-        video = youtube_downloader.to_unicode(video)
-        #shutil.move(video, u'{}.video'.format(video))
-        #video = u'{}.video'.format(video)
-        #video = youtube_downloader.to_unicode(video)
-        filesize = os.path.getsize(video)
-        logger.info('Best Video = [%s] Size = [%s] Downloaded successfully' % (video, filesize))
-    except:
-        pass
+    for i in range(1, 1+retry):
+        try:
+            itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='VIDEO')
+            logger.info('Get Best Video itags = [%s]' % itags[0])
+            video = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
+            video = youtube_downloader.to_unicode(video)
+            #shutil.move(video, u'{}.video'.format(video))
+            #video = u'{}.video'.format(video)
+            #video = youtube_downloader.to_unicode(video)
+            filesize = os.path.getsize(video)
+            logger.info('Best Video = [%s] Size = [%s] Downloaded Successfully' % (video, filesize))
+        except:
+            logger.exception('Generic Exception: ' + traceback.format_exc())
+            logger.error('Best Video = %s Downloaded Failed' % (url))
 
-    try:
-        itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='AUDIO')
-        logger.info('Get Best Audio itags = [%s]' % itags[0])
-        audio = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
-        audio = youtube_downloader.to_unicode(audio)
-        #shutil.move(audio, u'{}.audio'.format(audio))
-        #audio = u'{}.audio'.format(audio)
-        #audio = youtube_downloader.to_unicode(audio)
-        filesize = os.path.getsize(audio)
-        logger.info('Best Audio = [%s] Size = [%s] Downloaded successfully' % (audio, filesize))
-    except:
-        pass
+        try:
+            itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='AUDIO')
+            logger.info('Get Best Audio itags = [%s]' % itags[0])
+            audio = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
+            audio = youtube_downloader.to_unicode(audio)
+            #shutil.move(audio, u'{}.audio'.format(audio))
+            #audio = u'{}.audio'.format(audio)
+            #audio = youtube_downloader.to_unicode(audio)
+            filesize = os.path.getsize(audio)
+            logger.info('Best Audio = [%s] Size = [%s] Downloaded Successfully' % (audio, filesize))
+        except:
+            logger.exception('Generic Exception: ' + traceback.format_exc())
+            logger.error('Best Audio = %s Downloaded Failed' % (url))
+
+        if all([video, audio]):
+            break
 
     return audio, video
 
@@ -249,7 +256,7 @@ def main():
             logger.info("trying to download url = {0}".format(url))
             for i in range(1, args.retry+1):
                 try:
-                    audio, video = get_best_audio_video_from_youtube(url)
+                    audio, video = get_best_audio_video_from_youtube(url, args.retry)
                     if all([audio, video, args.join]):
                         if audio_video_join(audio=audio, video=video, out=args.out, keep=args.keep, replace=args.replace):
                             logger.info("Best video and audio joined successfully for url = {0}".format(url))
