@@ -531,8 +531,9 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
             # give second chance
             if skip:
                 try:
-                    oldfilename = '{}{}{}'.format(name, '_(1)', ext)
+                    oldfilename = u'{}{}{}'.format(name, '_(1)', ext)
                     fsize = os.path.getsize(oldfilename)
+                    logger.debug('Trying to check filename = [%s] and filesize = [%s] if exists and match' % (oldfilename, fsize))
                     if fsize == filesize:
                         logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (oldfilename, fsize))
                         return oldfilename
