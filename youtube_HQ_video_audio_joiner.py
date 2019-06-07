@@ -63,11 +63,12 @@ def get_best_audio_video_from_youtube(url, retry=3):
             #shutil.move(video, u'{}.video'.format(video))
             #video = u'{}.video'.format(video)
             #video = youtube_downloader.to_unicode(video)
-            filesize = os.path.getsize(video)
-            logger.info('Best Video = [%s] Size = [%s] Downloaded Successfully' % (video, filesize))
+            if os.path.exists(video):
+                filesize = os.path.getsize(video)
+                logger.info('Best Video = [%s] Size = [%s] Downloaded Successfully' % (video, filesize))
         except:
             logger.exception('Generic Exception: ' + traceback.format_exc())
-            logger.error('Best Video = %s Downloaded Failed' % (url))
+            logger.error('Downloaded Failed - Best Video = %s' % (url))
 
         try:
             itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='AUDIO')
@@ -77,15 +78,18 @@ def get_best_audio_video_from_youtube(url, retry=3):
             #shutil.move(audio, u'{}.audio'.format(audio))
             #audio = u'{}.audio'.format(audio)
             #audio = youtube_downloader.to_unicode(audio)
-            filesize = os.path.getsize(audio)
-            logger.info('Best Audio = [%s] Size = [%s] Downloaded Successfully' % (audio, filesize))
+            if os.path.exists(audio):
+                filesize = os.path.getsize(audio)
+                logger.info('Best Audio = [%s] Size = [%s] Downloaded Successfully' % (audio, filesize))
         except:
             logger.exception('Generic Exception: ' + traceback.format_exc())
-            logger.error('Best Audio = %s Downloaded Failed' % (url))
+            logger.error('Downloaded Failed - Best Audio = %s' % (url))
 
         if all([video, audio]):
             break
 
+    logger.debug('Best Video = [%s]' % (video))
+    logger.debug('Best Audio = [%s]' % (audio))
     return audio, video
 
 
