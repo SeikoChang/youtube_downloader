@@ -485,14 +485,16 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
         description=yt.description,
         views=yt.views,
         rating=yt.rating,
-        length=yt.length
+        length=yt.length,
+        thumbnail_url=yt.thumbnail_url
     ))
     print('\n{title} |\n{description} |\n\n{views} views | {rating} rating | {length} secs'.format(
         title=yt.title,
         description=yt.description,
         views=yt.views,
         rating=yt.rating,
-        length=yt.length
+        length=yt.length,
+        thumbnail_url=yt.thumbnail_url
     ))
     print('\n{fn} | {fs} bytes'.format(
         fn=filename,
