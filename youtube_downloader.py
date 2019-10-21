@@ -547,7 +547,7 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     logger.info('target local filesize = [%s]' % filesize)
 
     # create tmp file 
-    (fd, tmpfile) = tempfile.mkstemp(suffix=ext, prefix="", dir='.')
+    (fd, tmpfile) = tempfile.mkstemp(suffix=ext, prefix="", dir=outdir, text=False)
     tmpfile = to_unicode(tmpfile)
     os.close(fd)
     os.unlink(tmpfile)
@@ -556,7 +556,7 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     tmpname, tmpext = os.path.splitext(tmpbase)
 
     try:
-        stream.download(output_path=None, filename=tmpname, filename_prefix=None)
+        stream.download(output_path=tmppath, filename=tmpname, filename_prefix=None)
         sys.stdout.write('\n')
         shutil.move(tmpfile, filename)
         logger.info("File = [{0}] Saved".format(filename))
