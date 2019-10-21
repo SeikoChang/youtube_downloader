@@ -473,10 +473,10 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     """
     # TODO(nficano): allow download target to be specified
     # TODO(nficano): allow dash itags to be selected
-    rtv = None
     yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
     stream = yt.streams.get_by_itag(itag)
     filename = to_unicode(stream.default_filename)
+    thumbnail_url = yt.thumbnail_url
     filesize = stream.filesize
     logger.info('Youtube filename = [%s]' % filename)
     logger.info('Youtube filesize = [%s]' % filesize)
@@ -523,7 +523,7 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
         if fsize == filesize:
             if skip:
                 logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (filename, fsize))
-                return filename
+                return filename, thumbnail_url
             elif not replace:
                 filename = filename_fix_existing(filename)
         else:
@@ -538,7 +538,7 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
                     logger.debug('Trying to check filename = [%s] and filesize = [%s] if exists and match' % (oldfilename, fsize))
                     if fsize == filesize:
                         logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (oldfilename, fsize))
-                        return oldfilename
+                        return oldfilename, thumbnail_url
                 except:
                     pass
 
@@ -560,12 +560,11 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
         sys.stdout.write('\n')
         shutil.move(tmpfile, filename)
         logger.info("File = [{0}] Saved".format(filename))
-        rtv = filename
     except KeyboardInterrupt:
         sys.exit(1)
 
     sys.stdout.write('\n')
-    return rtv
+    return (filename, thumbnail_url)
 
 
 def main():
