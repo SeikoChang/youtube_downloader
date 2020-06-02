@@ -658,15 +658,19 @@ def unitest():
         main() 
 
     args.url = url ; test1();test2();test3()
-    args.url = None ; args.file ='{name}.{ext}'.format(name=filename, ext='ini')
+    args.url = url ; args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
     fp = to_unicode(args.file)
-    with open(fp, mode='wb') as fh:
+    with open(fp, mode='w+') as fh:
         fh.write(url)
     test4();test5()
 
 
 if __name__ == "__main__":  # Only run if this file is called directly
+    base = os.path.basename(__file__)
+    filename, file_extension = os.path.splitext(base)
+    inputfile = '{name}.{ext}'.format(name=filename, ext='ini')
+    open(inputfile, mode='a+')
     args = get_arguments()
-    #unitest()
+    unitest()
     sys.exit(main())
 
