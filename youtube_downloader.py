@@ -658,7 +658,7 @@ def unitest():
         main() 
 
     args.url = url ; test1();test2();test3()
-    args.url = url ; args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
+    args.url = None ; args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
     fp = to_unicode(args.file)
     with open(fp, mode='w+') as fh:
         fh.write(url)
@@ -672,5 +672,5 @@ if __name__ == "__main__":  # Only run if this file is called directly
     open(inputfile, mode='a+')
     args = get_arguments()
     unitest()
-    sys.exit(main())
+    #sys.exit(main())
 
