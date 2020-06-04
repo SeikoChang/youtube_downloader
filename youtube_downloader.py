@@ -556,7 +556,7 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     tmpname, tmpext = os.path.splitext(tmpbase)
 
     try:
-        stream.download(output_path=tmppath, filename=tmpname, filename_prefix=None)
+        stream.download(output_path=tmppath, filename=tmpname, filename_prefix=None, skip_existing=skip)
         sys.stdout.write('\n')
         shutil.move(tmpfile, filename)
         logger.info("File = [{0}] Saved".format(filename))
@@ -607,29 +607,26 @@ def main():
             if args.quality and args.mode:
                 itags = get_target_itags(url=url, quality=args.quality, mode=args.mode)
             for i in range(1, args.retry+1):
-                try:
-                    get_captions(url)
-                    replace = args.replace
-                    if len(itags) > 2:
-                        # change replace mode to always False if mutiple target found
-                        logger.debug('target number of files = [%s]' % len(itags))
-                        replace = False
-                    for i, itag in enumerate(itags):
-                        logger.debug('itag = [%s]' % itag)
-                        filename = download(url=url, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
-                        if filename:
-                            logger.info("Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
-                            if  args.file and (not args.listkeep):
-                                with open(args.file, "r") as f:
-                                    lines = f.readlines()
-                                with open(args.file, "w") as f:
-                                    for line in lines:
-                                        if line != url:
-                                            f.write(line)
-                    else:
-                        break
-                except:
-                    logger.exception('Unable to download Youtube from url = {0}'.format(url))
+                get_captions(url)
+                replace = args.replace
+                if len(itags) > 2:
+                    # change replace mode to always False if mutiple target found
+                    logger.debug('target number of files = [%s]' % len(itags))
+                    replace = False
+                for i, itag in enumerate(itags):
+                    logger.debug('itag = [%s]' % itag)
+                    filename = download(url=url, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
+                    if filename:
+                        logger.info("Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
+                        if  args.file and (not args.listkeep):
+                            with open(args.file, "r") as f:
+                                lines = f.readlines()
+                            with open(args.file, "w") as f:
+                                for line in lines:
+                                    if line != url:
+                                        f.write(line)
+                else:
+                    break
 
     return True
 
@@ -657,12 +654,13 @@ def unitest():
         args.mode = 'ALL'
         main() 
 
-    args.url = url ; test1();test2();test3()
+    #args.url = url ; test1();test2();test3()
     args.url = None ; args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
     fp = to_unicode(args.file)
     with open(fp, mode='w+') as fh:
         fh.write(url)
-    test4();test5()
+    #test4();
+    test5()
 
 
 if __name__ == "__main__":  # Only run if this file is called directly
