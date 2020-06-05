@@ -26,6 +26,8 @@ import operator
 
 from pytube import __version__
 from pytube import YouTube
+from pytube import Playlist
+from pytube.helpers import regex_search
 
 PY3K = sys.version_info >= (3, 0)
 if PY3K:
@@ -44,6 +46,8 @@ def get_arguments():
 
     base = os.path.basename(__file__)
     filename, file_extension = os.path.splitext(base)
+    defaultIni = '{name}.{ext}'.format(name=filename, ext='ini')
+    defaultLog = "{name}.{ext}".format(name=filename, ext='log')
 
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('url', nargs='?', help=(
@@ -51,9 +55,14 @@ def get_arguments():
         )
     )
 
+    parser.add_argument('playlist', nargs='?', help=(
+        'The YouTube playlist url, for example : "https://www.youtube.com/playlist?list={self.playlist_id}"'
+        )
+    )
+
     parser.add_argument(
-        "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
-            "identify the file path stored The YouTube /watch url(s), default file name = \"{name}.{ext}\"".format(name=filename, ext='ini')
+        "-f", "--file", action="store", type=str, default=defaultIni, help=(
+            "identify the file path stored The YouTube /watch url(s), default file name = \"%s\"" % defaultIni
         )
     )
 
@@ -114,7 +123,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-lf", "--logfile", action="store", type=str, default="{name}.{ext}".format(name=filename, ext='log'), help=(
+        "-lf", "--logfile", action="store", type=str, default=defaultLog, help=(
             "identify the log file name"
         )
     )
@@ -162,12 +171,9 @@ def get_arguments():
     parser.set_defaults(quiet=False)
     args = parser.parse_args(sys.argv[1:])
     print(args)
-    if not (args.url or os.path.exists(args.file)):
+    if not (args.url or args.playlist or os.path.exists(args.file)):
         parser.print_help()
-        base = os.path.basename(__file__)
-        filename, file_extension = os.path.splitext(base)
-        inputfile = '{name}.{ext}'.format(name=filename, ext='ini')
-        open(inputfile, mode='a+')
+        open(defaultIni, mode='a+')
 
     return args
 
@@ -286,6 +292,21 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def is_watchUrl(string):
+    rtv = False
+    try:
+        regex_search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", string, group=1)
+        rtv = True
+    except:
+        rtv = False
+
+    return rtv
+
+
+def is_playList(string):
+    return (f"playlist?list=" in string)
 
 
 def get_captions(url, lang):
@@ -492,9 +513,9 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     # TODO(nficano): allow download target to be specified
     # TODO(nficano): allow dash itags to be selected
     for i in range(1, 10):
-    yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
-    stream = yt.streams.get_by_itag(itag)
-    filename = to_unicode(stream.default_filename)
+        yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
+        stream = yt.streams.get_by_itag(itag)
+        filename = to_unicode(stream.default_filename)
         if 'YouTube' not in filename:
             break
     
@@ -594,7 +615,7 @@ def main():
     logger = set_logger(logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet)
     logger.debug('System out encoding = [%s]' % sys.stdout.encoding)
 
-    if not (args.url or os.path.exists(args.file)):
+    if not (args.url or args.playlist or os.path.exists(args.file)):
         sys.exit(1)
 
     if args.proxy:
@@ -617,10 +638,26 @@ def main():
         elif args.itag:
             downloads.append(args.url)
 
+    elif args.playlist:
+        playlist = Playlist(args.playlist)
+        for video in playlist:
+            #video.streams.get_highest_resolution().download()
+            downloads.append(video)
+
     elif args.file:
-        with open(args.file) as fp:
+        with open(args.file, "r") as fp:
             for line in fp:
-                downloads.append(line)
+                if is_watchUrl(line):
+                    downloads.append(line)
+                elif is_playList(line):
+                    playlist = Playlist(line)
+                    for video in playlist:
+                        downloads.append(video + '\n')
+
+        logger.debug('downloads = %s' % downloads)
+        with open(args.file, "w") as f:
+            for url in downloads:
+                f.write(url)
 
     if len(downloads) > 0:
         itags = [args.itag]
@@ -656,8 +693,11 @@ def main():
 def unitest():
     base = os.path.basename(__file__)
     filename, file_extension = os.path.splitext(base)
+    args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
+
     #url = 'https://www.youtube.com/watch?v=F1fqet9V494'
     url = 'https://www.youtube.com/watch?v=xwsYvBYZcx4'
+    playlist = 'https://www.youtube.com/playlist?list=PLteWjpkbvj7rUU5SFt2BlNVCQqkjulPZR'
 
     def test1():
         logger.info("Testing with 'display_streams()' for url =  {0}".format(url))
@@ -688,16 +728,28 @@ def unitest():
         args.mode = 'ALL'
         main()
 
+    def test6():
+        logger.info("Testing with downloading playlist from input")
+        args.replace = False
+        args.skip = True
+        args.playlist = playlist
+        main()
+
     args.url = url ; test3(); test2(); test1()
-    args.url = None ; args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
+    args.url = None
     fp = to_unicode(args.file)
     with open(fp, mode='w+') as fh:
         fh.write(url)
     test4();test5()
 
+    test6()
+    with open(fp, mode='w+') as fh:
+        fh.write(playlist)
+
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
-    unitest()
+    #unitest()
+    main()
     #sys.exit(main())
 
