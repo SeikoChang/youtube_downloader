@@ -491,9 +491,13 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     """
     # TODO(nficano): allow download target to be specified
     # TODO(nficano): allow dash itags to be selected
+    for i in range(1, 10):
     yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
     stream = yt.streams.get_by_itag(itag)
     filename = to_unicode(stream.default_filename)
+        if 'YouTube' not in filename:
+            break
+    
     thumbnail_url = yt.thumbnail_url
     filesize = stream.filesize
     logger.info('Youtube filename = [%s]' % filename)
