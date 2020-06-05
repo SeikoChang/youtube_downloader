@@ -52,7 +52,7 @@ def get_arguments():
     )
     parser.add_argument(
         "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
-            "identify the file which stored The YouTube /watch url(s)"
+            "identify the file path stored The YouTube /watch url(s), default file name = \"{name}.{ext}\"".format(name=filename, ext='ini')
         )
     )
     parser.add_argument(
@@ -89,12 +89,14 @@ def get_arguments():
     )
     parser.add_argument(
         "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if replace the exist file"
+            "idenfify if replace the existed file with the same filename \
+            or download new file with prefix file name, \
+            this only be taken when skip = False"
         )
     )
     parser.add_argument(
         "-sp", "--skip", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if replace the exist file"
+            "idenfify if skip the existed file"
         )
     )
     parser.add_argument(
@@ -120,7 +122,7 @@ def get_arguments():
     )
     parser.add_argument(
         "-x", "--proxy", action="store_true", help=(
-            "set proxy"
+            "set proxy use for downloading stream"
         )
     )
 
@@ -137,7 +139,8 @@ def get_arguments():
 
     parser.add_argument(
         "-cap", "--caption", action="store_true", help=(
-            "download all available cpation for all languages if available"
+            "download all available cpation for all languages if available \
+             or download specific language caption only"
         )
     )
 
@@ -149,6 +152,10 @@ def get_arguments():
     print(args)
     if not (args.url or os.path.exists(args.file)):
         parser.print_help()
+        base = os.path.basename(__file__)
+        filename, file_extension = os.path.splitext(base)
+        inputfile = '{name}.{ext}'.format(name=filename, ext='ini')
+        #open(inputfile, mode='a+')
 
     return args
 
@@ -663,11 +670,7 @@ def unitest():
 
 
 if __name__ == "__main__":  # Only run if this file is called directly
-    base = os.path.basename(__file__)
-    filename, file_extension = os.path.splitext(base)
-    inputfile = '{name}.{ext}'.format(name=filename, ext='ini')
-    open(inputfile, mode='a+')
     args = get_arguments()
-    unitest()
+    #unitest()
     #sys.exit(main())
 
