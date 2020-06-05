@@ -32,7 +32,7 @@ if PY3K:
     import urllib.request as urllib2
     import urllib.parse as urlparse
 else:
-    import urllib2 
+    import urllib2
     import urlparse
 
 
@@ -50,11 +50,13 @@ def get_arguments():
         'The YouTube /watch url'
         )
     )
+
     parser.add_argument(
         "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
             "identify the file path stored The YouTube /watch url(s), default file name = \"{name}.{ext}\"".format(name=filename, ext='ini')
         )
     )
+
     parser.add_argument(
         "-lkp", "--listkeep", type=str2bool, nargs='?', const=False, help=(
             "idenfify if keep item in -f --file {file} after successfully download file"
@@ -66,16 +68,19 @@ def get_arguments():
             'Get current version of Pytube'
         )
     )
+
     parser.add_argument(
         '-t', '--itag', type=int, default=18, help=(
             'The itag for the desired stream'
         )
     )
+
     parser.add_argument(
         '-l', '--list', action='store_true', help=(
             'The list option causes pytube cli to return a list of streams available to download'
         )
     )
+
     parser.add_argument(
         '-bpr', '--build-playback-report', action='store_true', help=(
             'Save the html and js to disk'
@@ -87,6 +92,7 @@ def get_arguments():
             "identify the destnation folder/filename to store the file"
         )
     )
+
     parser.add_argument(
         "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
             "idenfify if replace the existed file with the same filename \
@@ -94,11 +100,13 @@ def get_arguments():
             this only be taken when skip = False"
         )
     )
+
     parser.add_argument(
         "-sp", "--skip", type=str2bool, nargs='?', const=True, help=(
             "idenfify if skip the existed file"
         )
     )
+
     parser.add_argument(
         "-r", "--retry",action="store", type=int, default=1, help=(
             "retry time when get file failed"
@@ -110,16 +118,19 @@ def get_arguments():
             "identify the log file name"
         )
     )
+
     parser.add_argument(
         "-ll", "--verbosity", type=str, default="DEBUG", choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'], help=(
             "identify output verbosity"
         )
     )
+
     parser.add_argument(
         "-q", "--quiet", type=str2bool, nargs='?', const=True, help=(
             "idenfify if enable the silent mode"
         )
     )
+
     parser.add_argument(
         "-x", "--proxy", action="store_true", help=(
             "set proxy use for downloading stream"
@@ -131,6 +142,7 @@ def get_arguments():
             "choose the quality of video to download"
         )
     )
+
     parser.add_argument(
         "-m", "--mode", type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
             "choose only video/audio or video and audio together"
@@ -155,7 +167,7 @@ def get_arguments():
         base = os.path.basename(__file__)
         filename, file_extension = os.path.splitext(base)
         inputfile = '{name}.{ext}'.format(name=filename, ext='ini')
-        #open(inputfile, mode='a+')
+        open(inputfile, mode='a+')
 
     return args
 
@@ -187,7 +199,7 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     if quiet:
         logging.disable(logging.CRITICAL)
     else:
-        logging.disable(logging.NOTSET) 
+        logging.disable(logging.NOTSET)
 
     #module = sys.modules['__main__'].__file__
     #logger = logging.getLogger(module)
@@ -261,7 +273,7 @@ def to_unicode(filename):
         # [ ] add test to repository / Travis
         return filename
     else:
-        if isinstance(filename, unicode): 
+        if isinstance(filename, unicode):
             return filename
         else:
             return unicode(filename, 'utf-8')
@@ -276,7 +288,7 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-def get_captions(url):
+def get_captions(url, lang):
     captions = None
     try:
         yt = YouTube(url)
@@ -287,15 +299,14 @@ def get_captions(url):
             result = p.search(str(caption))
             if result:
                 code = result.group(1)
-                logger.debug('captions code = [%s]' % code)
-                cap = caption.generate_srt_captions()
-                title = yt.title
-                stream = yt.streams.first()
-                filename = stream.ss
-                name, ext = os.path.splitext(filename)
-                fp = to_unicode('{}_{}.txt'.format(name, code))
-                with open(fp, 'wb') as fh:
-                    fh.write(cap.encode('utf8'))
+                if (lang == True) or (code.lower() == lang.lower()):
+                    logger.debug('captions code = [%s]' % code)
+                    cap = caption.generate_srt_captions()
+                    filename = yt.streams.first().default_filename
+                    name, ext = os.path.splitext(filename)
+                    fp = to_unicode('{}_{}.txt'.format(name, code))
+                    with open(fp, 'wb') as fh:
+                        fh.write(cap.encode('utf8'))
     except:
         logger.warning('no any captions found!')
 
@@ -344,7 +355,7 @@ def display_streams(url):
             print(stream)
     except:
         logger.error('Unable to list all streams from Video = [%s]' % url)
-    
+
     return streams
 
 
@@ -373,7 +384,7 @@ def get_target_itags(url, quality='NORMAL', mode='VIDEO_AUDIO'):
                 rank[itag] = int(filesize)
 
         sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
-        
+
         if quality.upper() == 'HIGH':
             itags = [sorted_rank[-1][0]]
         elif quality.upper() == 'NORMAL':
@@ -427,7 +438,7 @@ def get_terminal_size():
     return get_terminal_size_windows() or get_terminal_size_stty() or get_terminal_size_tput() or (25, 80)
 
 
-def display_progress_bar(bytes_received, filesize, ch='█', scale=0.55): 
+def display_progress_bar(bytes_received, filesize, ch='█', scale=0.55):
     """Display a simple, pretty progress bar.
     Example:
     ~~~~~~~~
@@ -553,7 +564,7 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     logger.info('target local filename = [%s]' % filename)
     logger.info('target local filesize = [%s]' % filesize)
 
-    # create tmp file 
+    # create tmp file
     (fd, tmpfile) = tempfile.mkstemp(suffix=ext, prefix="", dir=outdir, text=False)
     tmpfile = to_unicode(tmpfile)
     os.close(fd)
@@ -597,11 +608,11 @@ def main():
             build_playback_report(args.url)
 
         elif args.caption:
-            get_captions(args.url)
+            get_captions(args.url, args.caption)
 
         elif args.itag:
             downloads.append(args.url)
- 
+
     elif args.file:
         with open(args.file) as fp:
             for line in fp:
@@ -614,7 +625,7 @@ def main():
             if args.quality and args.mode:
                 itags = get_target_itags(url=url, quality=args.quality, mode=args.mode)
             for i in range(1, args.retry+1):
-                get_captions(url)
+                get_captions(url, True)
                 replace = args.replace
                 if len(itags) > 2:
                     # change replace mode to always False if mutiple target found
@@ -645,23 +656,35 @@ def unitest():
     url = 'https://www.youtube.com/watch?v=xwsYvBYZcx4'
 
     def test1():
+        logger.info("Testing with 'display_streams()' for url =  {0}".format(url))
         args.list = True
         main()
+
     def test2():
+        logger.info("Testing with 'build_playback_report()' for url = {0}".format(url))
         args.build_playback_report = True
         main()
+
     def test3():
+        logger.info("Testing with 'get_captions(lang=zh-TW)' for url = {0}".format(url))
+        args.caption = 'zh-TW'
+        main()
+        logger.info("Testing with 'get_captions(lang=True)' for url = {0}".format(url))
         args.caption = True
         main()
+
     def test4():
-        main() 
+        logger.info("Testing with download file from ini file")
+        main()
+
     def test5():
+        logger.info("Testing with download all files from ini file")
         args.replace = True
         args.quality = 'All'
         args.mode = 'ALL'
-        main() 
+        main()
 
-    args.url = url ; test1();test2();test3()
+    args.url = url ; test3(); test2(); test1()
     args.url = None ; args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
     fp = to_unicode(args.file)
     with open(fp, mode='w+') as fh:
@@ -671,6 +694,6 @@ def unitest():
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
-    #unitest()
+    unitest()
     #sys.exit(main())
 
