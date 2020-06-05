@@ -39,6 +39,120 @@ else:
 logger = logging.getLogger(__name__)
 
 
+def get_arguments():
+    print(main.__doc__)
+
+    base = os.path.basename(__file__)
+    filename, file_extension = os.path.splitext(base)
+
+    parser = argparse.ArgumentParser(description=main.__doc__)
+    parser.add_argument('url', nargs='?', help=(
+        'The YouTube /watch url'
+        )
+    )
+    parser.add_argument(
+        "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
+            "identify the file which stored The YouTube /watch url(s)"
+        )
+    )
+    parser.add_argument(
+        "-lkp", "--listkeep", type=str2bool, nargs='?', const=False, help=(
+            "idenfify if keep item in -f --file {file} after successfully download file"
+        )
+    )
+
+    parser.add_argument(
+        '-v', '--version', action='version', version='%(prog)s ' + __version__, help=(
+            'Get current version of Pytube'
+        )
+    )
+    parser.add_argument(
+        '-t', '--itag', type=int, default=18, help=(
+            'The itag for the desired stream'
+        )
+    )
+    parser.add_argument(
+        '-l', '--list', action='store_true', help=(
+            'The list option causes pytube cli to return a list of streams available to download'
+        )
+    )
+    parser.add_argument(
+        '-bpr', '--build-playback-report', action='store_true', help=(
+            'Save the html and js to disk'
+        )
+    )
+
+    parser.add_argument(
+        "-o", "--out", action="store", type=str, help=(
+            "identify the destnation folder/filename to store the file"
+        )
+    )
+    parser.add_argument(
+        "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
+            "idenfify if replace the exist file"
+        )
+    )
+    parser.add_argument(
+        "-sp", "--skip", type=str2bool, nargs='?', const=True, help=(
+            "idenfify if replace the exist file"
+        )
+    )
+    parser.add_argument(
+        "-r", "--retry",action="store", type=int, default=1, help=(
+            "retry time when get file failed"
+        )
+    )
+
+    parser.add_argument(
+        "-lf", "--logfile", action="store", type=str, default="{name}.{ext}".format(name=filename, ext='log'), help=(
+            "identify the log file name"
+        )
+    )
+    parser.add_argument(
+        "-ll", "--verbosity", type=str, default="DEBUG", choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'], help=(
+            "identify output verbosity"
+        )
+    )
+    parser.add_argument(
+        "-q", "--quiet", type=str2bool, nargs='?', const=True, help=(
+            "idenfify if enable the silent mode"
+        )
+    )
+    parser.add_argument(
+        "-x", "--proxy", action="store_true", help=(
+            "set proxy"
+        )
+    )
+
+    parser.add_argument(
+        "-qt", "--quality", type=str, choices=['HIGH', 'NORMAL', 'LOW', 'ALL'], help=(
+            "choose the quality of video to download"
+        )
+    )
+    parser.add_argument(
+        "-m", "--mode", type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
+            "choose only video/audio or video and audio together"
+        )
+    )
+
+    parser.add_argument(
+        "-cap", "--caption", action="store_true", help=(
+            "download all available cpation for all languages if available"
+        )
+    )
+
+    parser.set_defaults(listkeep=False)
+    parser.set_defaults(replace=True)
+    parser.set_defaults(skip=True)
+    parser.set_defaults(quiet=False)
+    args = parser.parse_args(sys.argv[1:])
+    print(args)
+    if not (args.url or os.path.exists(args.file)):
+        parser.print_help()
+
+    return args
+
+
 def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     LogLevel = loglevel_converter(verbosity)
     formatter = '%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s'
@@ -74,14 +188,95 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     return logger
 
 
+def loglevel_converter(loglevel):
+    numeric_level = getattr(logging, loglevel.upper(), logging.info)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    return numeric_level
+
+
+def median(lst):
+    #sortedLst = sorted(lst)
+    lstLen = len(lst)
+    index = (lstLen - 1) // 2
+
+    if (lstLen % 2):
+        return lst[index]
+    else:
+        return lst[index]
+
+
+def filename_fix_existing(filename):
+    """Expands name portion of filename with numeric ' (x)' suffix to
+    return filename that doesn't exist already.
+    """
+    head, tail = ntpath.split(filename)
+    base = os.path.basename(filename)
+    name, ext = os.path.splitext(base)
+
+    if not head:
+        head = u'.'
+
+    try:
+        name, ext = tail.rsplit('.', 1)
+    except:
+        # handle those filename without extention name
+        name = tail.rsplit(os.sep, 1)[0]
+        ext = None
+    names = [x for x in os.listdir(head) if x.startswith(name)]
+    if ext:
+        names = [x.rsplit('.', 1)[0] for x in names]
+    else:
+        names = [x.rsplit(os.sep, 1)[0] for x in names]
+    suffixes = [x.replace(name, '') for x in names]
+    # filter suffixes that match ' (x)' pattern
+    suffixes = [x[2:-1] for x in suffixes
+                   if x.startswith('_(') and x.endswith(')')]
+    indexes  = [int(x) for x in suffixes
+                   if set(x) <= set('0123456789')]
+    idx = 1
+    if indexes:
+        idx += sorted(indexes)[-1]
+
+    if ext:
+        out = '{0}_({1}).{2}'.format(name, idx, ext)
+    else:
+        out = '{0}_({1})'.format(name, idx)
+    out = os.path.join(head, out)
+    return out
+
+
+def to_unicode(filename):
+    """:return: filename decoded from utf-8 to unicode"""
+    if PY3K:
+        # [ ] test this on Python 3 + (Windows, Linux)
+        # [ ] port filename_from_headers once this works
+        # [ ] add test to repository / Travis
+        return filename
+    else:
+        if isinstance(filename, unicode): 
+            return filename
+        else:
+            return unicode(filename, 'utf-8')
+
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 def get_captions(url):
     captions = None
     try:
         yt = YouTube(url)
         captions = yt.captions.all()
         logger.info('captions = %s' % captions)
+        p = re.compile('<Caption lang=".*" code="(.*)">')
         for caption in captions:
-            p = re.compile('<Caption lang=".*" code="(.*)">')
             result = p.search(str(caption))
             if result:
                 code = result.group(1)
@@ -89,7 +284,7 @@ def get_captions(url):
                 cap = caption.generate_srt_captions()
                 title = yt.title
                 stream = yt.streams.first()
-                filename = stream.default_filename
+                filename = stream.ss
                 name, ext = os.path.splitext(filename)
                 fp = to_unicode('{}_{}.txt'.format(name, code))
                 with open(fp, 'wb') as fh:
@@ -267,201 +462,6 @@ def on_progress(stream, chunk, file_handle, bytes_remaining):
     filesize = stream.filesize
     bytes_received = filesize - bytes_remaining
     display_progress_bar(bytes_received, filesize)
-
-
-def median(lst):
-    #sortedLst = sorted(lst)
-    lstLen = len(lst)
-    index = (lstLen - 1) // 2
-
-    if (lstLen % 2):
-        return lst[index]
-    else:
-        return lst[index]
-
-
-def filename_fix_existing(filename):
-    """Expands name portion of filename with numeric ' (x)' suffix to
-    return filename that doesn't exist already.
-    """
-    head, tail = ntpath.split(filename)
-    base = os.path.basename(filename)
-    name, ext = os.path.splitext(base)
-
-    if not head:
-        head = u'.'
-
-    try:
-        name, ext = tail.rsplit('.', 1)
-    except:
-        # handle those filename without extention name
-        name = tail.rsplit(os.sep, 1)[0]
-        ext = None
-    names = [x for x in os.listdir(head) if x.startswith(name)]
-    if ext:
-        names = [x.rsplit('.', 1)[0] for x in names]
-    else:
-        names = [x.rsplit(os.sep, 1)[0] for x in names]
-    suffixes = [x.replace(name, '') for x in names]
-    # filter suffixes that match ' (x)' pattern
-    suffixes = [x[2:-1] for x in suffixes
-                   if x.startswith('_(') and x.endswith(')')]
-    indexes  = [int(x) for x in suffixes
-                   if set(x) <= set('0123456789')]
-    idx = 1
-    if indexes:
-        idx += sorted(indexes)[-1]
-
-    if ext:
-        out = '{0}_({1}).{2}'.format(name, idx, ext)
-    else:
-        out = '{0}_({1})'.format(name, idx)
-    out = os.path.join(head, out)
-    return out
-
-
-def to_unicode(filename):
-    """:return: filename decoded from utf-8 to unicode"""
-    if PY3K:
-        # [ ] test this on Python 3 + (Windows, Linux)
-        # [ ] port filename_from_headers once this works
-        # [ ] add test to repository / Travis
-        return filename
-    else:
-        if isinstance(filename, unicode): 
-            return filename
-        else:
-            return unicode(filename, 'utf-8')
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
-def loglevel_converter(loglevel):
-    numeric_level = getattr(logging, loglevel.upper(), logging.info)
-    if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
-    return numeric_level
-
-
-def get_arguments():
-    print(main.__doc__)
-
-    base = os.path.basename(__file__)
-    filename, file_extension = os.path.splitext(base)
-
-    parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument('url', nargs='?', help=(
-        'The YouTube /watch url'
-        )
-    )
-    parser.add_argument(
-        "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
-            "identify the file which stored The YouTube /watch url(s)"
-        )
-    )
-    parser.add_argument(
-        "-lkp", "--listkeep", type=str2bool, nargs='?', const=False, help=(
-            "idenfify if keep item in -f --file {file} after successfully download file"
-        )
-    )
-
-    parser.add_argument(
-        '-v', '--version', action='version', version='%(prog)s ' + __version__, help=(
-            'Get current version of Pytube'
-        )
-    )
-    parser.add_argument(
-        '-t', '--itag', type=int, default=18, help=(
-            'The itag for the desired stream'
-        )
-    )
-    parser.add_argument(
-        '-l', '--list', action='store_true', help=(
-            'The list option causes pytube cli to return a list of streams available to download'
-        )
-    )
-    parser.add_argument(
-        '-bpr', '--build-playback-report', action='store_true', help=(
-            'Save the html and js to disk'
-        )
-    )
-
-    parser.add_argument(
-        "-o", "--out", action="store", type=str, help=(
-            "identify the destnation folder/filename to store the file"
-        )
-    )
-    parser.add_argument(
-        "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if replace the exist file"
-        )
-    )
-    parser.add_argument(
-        "-sp", "--skip", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if replace the exist file"
-        )
-    )
-    parser.add_argument(
-        "-r", "--retry",action="store", type=int, default=1, help=(
-            "retry time when get file failed"
-        )
-    )
-
-    parser.add_argument(
-        "-lf", "--logfile", action="store", type=str, default="{name}.{ext}".format(name=filename, ext='log'), help=(
-            "identify the log file name"
-        )
-    )
-    parser.add_argument(
-        "-ll", "--verbosity", type=str, default="DEBUG", choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'], help=(
-            "identify output verbosity"
-        )
-    )
-    parser.add_argument(
-        "-q", "--quiet", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if enable the silent mode"
-        )
-    )
-    parser.add_argument(
-        "-x", "--proxy", action="store_true", help=(
-            "set proxy"
-        )
-    )
-
-    parser.add_argument(
-        "-qt", "--quality", type=str, choices=['HIGH', 'NORMAL', 'LOW', 'ALL'], help=(
-            "choose the quality of video to download"
-        )
-    )
-    parser.add_argument(
-        "-m", "--mode", type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
-            "choose only video/audio or video and audio together"
-        )
-    )
-
-    parser.add_argument(
-        "-cap", "--caption", action="store_true", help=(
-            "download all available cpation for all languages if available"
-        )
-    )
-
-    parser.set_defaults(listkeep=False)
-    parser.set_defaults(replace=True)
-    parser.set_defaults(skip=True)
-    parser.set_defaults(quiet=False)
-    args = parser.parse_args(sys.argv[1:])
-    print(args)
-    if not (args.url or os.path.exists(args.file)):
-        parser.print_help()
-
-    return args
 
 
 def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
@@ -668,6 +668,6 @@ if __name__ == "__main__":  # Only run if this file is called directly
     inputfile = '{name}.{ext}'.format(name=filename, ext='ini')
     open(inputfile, mode='a+')
     args = get_arguments()
-    #unitest()
+    unitest()
     #sys.exit(main())
 
