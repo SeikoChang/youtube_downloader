@@ -519,9 +519,11 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None, retr
             filename = to_unicode(stream.default_filename)
             if 'YouTube' not in filename:
                 break
-        except Exception as e:
+        except Exception as ex:
             logger.error('Uable to get FileName from = [%s]' % url)
-            logger.error('Due to the reason = [%s]' % e.args[0])
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            logger.error('Due to the reason = [%s]' % message)
     else:
         return False
 
