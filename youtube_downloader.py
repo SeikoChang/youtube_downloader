@@ -503,7 +503,7 @@ def on_progress(stream, chunk, file_handle, bytes_remaining):
     display_progress_bar(bytes_received, filesize)
 
 
-def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
+def download(url, itag=18, out=None, replace=True, skip=True, proxies=None, retry=10):
     """Start downloading a YouTube video.
     :param str url:
         A valid YouTube watch URL.
@@ -512,13 +512,19 @@ def download(url, itag=18, out=None, replace=True, skip=True, proxies=None):
     """
     # TODO(nficano): allow download target to be specified
     # TODO(nficano): allow dash itags to be selected
-    for i in range(1, 10):
-        yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
-        stream = yt.streams.get_by_itag(itag)
-        filename = to_unicode(stream.default_filename)
-        if 'YouTube' not in filename:
-            break
-    
+    for i in range(1, 1+retry):
+        try:
+            yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
+            stream = yt.streams.get_by_itag(itag)
+            filename = to_unicode(stream.default_filename)
+            if 'YouTube' not in filename:
+                break
+        except Exception as e:
+            logger.error('Uable to get FileName from = [%s]' % url)
+            logger.error('Due to the reason = [%s]' % e.args[0])
+    else:
+        return False
+
     thumbnail_url = yt.thumbnail_url
     filesize = stream.filesize
     logger.info('Youtube filename = [%s]' % filename)
