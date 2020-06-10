@@ -320,7 +320,8 @@ def get_captions(yt, lang):
             code = caption.code
             if (lang == True) or (code.lower() == lang.lower()):
                 logger.debug('captions code = [%s]' % code)
-                caption.download(filename)
+                caption.download(title=filename, srt=True,
+                                 output_path='./Youtube/')
                 # yt.captions.get_by_language_code(code).download(filename)
 
     except:
@@ -694,7 +695,10 @@ def main():
                     replace = False
                 for i, itag in enumerate(itags):
                     logger.debug('itag = [%s]' % itag)
-                    filename = yt.streams.get_by_itag(itag).download()
+                    filename = '{title}_{video}_{audio}_{fps}'.format(title=yt.streams.get_by_itag(itag).title, video=yt.streams.get_by_itag(
+                        itag).resolution, audio=yt.streams.get_by_itag(itag).abr, fps=yt.streams.get_by_itag(itag).fps)
+                    filename = yt.streams.get_by_itag(itag).download(
+                        output_path='./Youtube/', filename=filename)
                     #filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
                     if filename:
                         logger.info(
@@ -781,6 +785,8 @@ def unitest():
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
+    args.quality = 'All'
+    args.mode = 'ALL'
     # unitest()
     main()
     # sys.exit(main())
