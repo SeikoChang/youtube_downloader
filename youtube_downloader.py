@@ -117,7 +117,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-r", "--retry",action="store", type=int, default=1, help=(
+        "-r", "--retry",action="store", type=int, default=3, help=(
             "retry time when get file failed"
         )
     )
@@ -309,10 +309,9 @@ def is_playList(string):
     return (f"playlist?list=" in string)
 
 
-def get_captions(url, lang):
+def get_captions(yt, lang):
     captions = None
     try:
-        yt = YouTube(url)
         captions = yt.captions.all()
         logger.info('captions = %s' % captions)
         p = re.compile('<Caption lang=".*" code="(.*)">')
@@ -380,9 +379,8 @@ def display_streams(url):
     return streams
 
 
-def get_target_itags(url, quality='NORMAL', mode='VIDEO_AUDIO'):
+def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     itags = [18]
-    yt = YouTube(url)
     if mode and quality:
         if mode.upper() == 'VIDEO_AUDIO':
             streams = yt.streams.filter(progressive=True).order_by('itag').all()
@@ -403,7 +401,7 @@ def get_target_itags(url, quality='NORMAL', mode='VIDEO_AUDIO'):
                 rank[itag] = int(filesize)
             except Exception as ex:
                 logger.error('Uable to get Youtube Video :')
-                logger.error(url)
+                logger.error(yt.watch_url)
                 logger.error(stream.title)
                 logger.error(stream.itag)
                 logger.error(stream.filesize_approx)
@@ -511,32 +509,18 @@ def on_progress(stream, chunk, file_handle, bytes_remaining):
     display_progress_bar(bytes_received, filesize)
 
 
-def download(url, itag=18, out=None, replace=True, skip=True, proxies=None, retry=10):
+def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry=10):
     """Start downloading a YouTube video.
     :param str url:
         A valid YouTube watch URL.
     :param str itag:
         YouTube format identifier code.
     """
-    # TODO(nficano): allow download target to be specified
-    # TODO(nficano): allow dash itags to be selected
-    for i in range(1, 1+retry):
-        try:
-            yt = YouTube(url, on_progress_callback=on_progress, proxies=proxies)
-            stream = yt.streams.get_by_itag(itag)
-            filename = to_unicode(stream.default_filename)
-            if 'YouTube' not in filename:
-                break
-        except Exception as ex:
-            logger.error('Uable to get FileName from = [%s]' % url)
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            logger.error('Due to the reason = [%s]' % message)
-    else:
-        return False
 
     thumbnail_url = yt.thumbnail_url
+    stream = yt.streams.get_by_itag(itag)
     filesize = stream.filesize
+    filename = to_unicode(stream.default_filename)
     logger.info('Youtube filename = [%s]' % filename)
     logger.info('Youtube filesize = [%s]' % filesize)
     logger.info('\n{title} |\n{description} |\n\n{views} views | {rating} rating | {length} secs'.format(
@@ -644,13 +628,8 @@ def main():
     if args.url:
         if args.list:
             display_streams(args.url)
-
         elif args.build_playback_report:
             build_playback_report(args.url)
-
-        elif args.caption:
-            get_captions(args.url, args.caption)
-
         elif args.itag:
             downloads.append(args.url)
 
@@ -679,10 +658,29 @@ def main():
         itags = [args.itag]
         for url in downloads:
             logger.info("trying to download url = {0}".format(url))
-            if args.quality and args.mode:
-                itags = get_target_itags(url=url, quality=args.quality, mode=args.mode)
+
+            # Get Youtube Object with correct filename
             for i in range(1, args.retry+1):
-                get_captions(url, True)
+                try:
+                    yt = YouTube(url, on_progress_callback=on_progress, proxies=proxy_params)
+                    stream = yt.streams.get_by_itag(args.itag)
+                    filename = to_unicode(stream.default_filename)
+                    if 'YouTube' not in filename:
+                        break
+                except Exception as ex:
+                    logger.error('Uable to get FileName from = [%s]' % url)
+                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    message = template.format(type(ex).__name__, ex.args)
+                    logger.error('Due to the reason = [%s]' % message)
+            else:
+                continue
+
+            if args.quality and args.mode:
+                itags = get_target_itags(yt=yt, quality=args.quality, mode=args.mode)
+            for i in range(1, args.retry+1):
+                if args.caption:
+                    get_captions(yt, args.caption)
+
                 replace = args.replace
                 if len(itags) > 2:
                     # change replace mode to always False if mutiple target found
@@ -690,7 +688,7 @@ def main():
                     replace = False
                 for i, itag in enumerate(itags):
                     logger.debug('itag = [%s]' % itag)
-                    filename = download(url=url, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
+                    filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
                     if filename:
                         logger.info("Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
                         if  args.file and (not args.listkeep):
