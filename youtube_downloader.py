@@ -398,11 +398,17 @@ def get_target_itags(url, quality='NORMAL', mode='VIDEO_AUDIO'):
         p = re.compile('.*itag=\"(.*)\" mime_type=.*')
         rank = {}
         for stream in streams:
-            filesize = stream.filesize
-            result = p.search(str(stream))
-            if result:
-                itag = result.group(1)
-                rank[itag] = int(filesize)
+            try:
+                filesize = stream.filesize
+                result = p.search(str(stream))
+                if result:
+                    itag = result.group(1)
+                    rank[itag] = int(filesize)
+            except Exception as ex:
+                logger.error('Uable to get Video from URL = [%s]' % stream.url)
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                logger.error('Due to the reason = [%s]' % message)
 
         sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
 
@@ -753,7 +759,7 @@ def unitest():
     test6()
     with open(fp, mode='w+') as fh:
         fh.write(playlist)
-
+    test4()
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
