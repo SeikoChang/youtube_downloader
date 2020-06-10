@@ -19,10 +19,10 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     formatter = '%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s'
 
     logging.basicConfig(
-                    level=LogLevel,
-                    format=formatter,
-                    datefmt='%a %b %d %H:%M:%S CST %Y'
-                    )
+        level=LogLevel,
+        format=formatter,
+        datefmt='%a %b %d %H:%M:%S CST %Y'
+    )
 
     logger = logging.getLogger(__name__)
     logger.handlers = []
@@ -30,7 +30,8 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
 
     # new file handler
     if logfile:
-        handler = logging.FileHandler(filename=logfile, mode='a+', encoding='utf-8', delay=True)
+        handler = logging.FileHandler(
+            filename=logfile, mode='a+', encoding='utf-8', delay=True)
         handler.setLevel(LogLevel)
         # set logging format
         formatter = logging.Formatter(formatter)
@@ -41,7 +42,7 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     if quiet:
         logging.disable(logging.CRITICAL)
     else:
-        logging.disable(logging.NOTSET) 
+        logging.disable(logging.NOTSET)
 
     #module = sys.modules['__main__'].__file__
     #logger = logging.getLogger(module)
@@ -56,31 +57,37 @@ def get_best_audio_video_from_youtube(url, retry=3):
     video = audio = None
     for i in range(1, 1+retry):
         try:
-            itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='VIDEO')
+            itags = youtube_downloader.get_target_itags(
+                url=url, quality='HIGH', mode='VIDEO')
             logger.info('Get Best Video itags = [%s]' % itags[0])
-            video = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
+            video = youtube_downloader.download(
+                url=url, itag=itags[0], replace=True, skip=True)
             video = youtube_downloader.to_unicode(video)
             #shutil.move(video, u'{}.video'.format(video))
             #video = u'{}.video'.format(video)
             #video = youtube_downloader.to_unicode(video)
             if os.path.exists(video):
                 filesize = os.path.getsize(video)
-                logger.info('Best Video = [%s] Size = [%s] Downloaded Successfully' % (video, filesize))
+                logger.info(
+                    'Best Video = [%s] Size = [%s] Downloaded Successfully' % (video, filesize))
         except:
             logger.exception('Generic Exception: ' + traceback.format_exc())
             logger.error('Downloaded Failed - Best Video = %s' % (url))
 
         try:
-            itags = youtube_downloader.get_target_itags(url=url, quality='HIGH', mode='AUDIO')
+            itags = youtube_downloader.get_target_itags(
+                url=url, quality='HIGH', mode='AUDIO')
             logger.info('Get Best Audio itags = [%s]' % itags[0])
-            audio = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
+            audio = youtube_downloader.download(
+                url=url, itag=itags[0], replace=True, skip=True)
             audio = youtube_downloader.to_unicode(audio)
             #shutil.move(audio, u'{}.audio'.format(audio))
             #audio = u'{}.audio'.format(audio)
             #audio = youtube_downloader.to_unicode(audio)
             if os.path.exists(audio):
                 filesize = os.path.getsize(audio)
-                logger.info('Best Audio = [%s] Size = [%s] Downloaded Successfully' % (audio, filesize))
+                logger.info(
+                    'Best Audio = [%s] Size = [%s] Downloaded Successfully' % (audio, filesize))
         except:
             logger.exception('Generic Exception: ' + traceback.format_exc())
             logger.error('Downloaded Failed - Best Audio = %s' % (url))
@@ -134,7 +141,6 @@ def audio_video_join(audio, video, out=None, keep=False, replace=True):
     os.unlink(tmpfileOut)
     logger.info('target local out tmpfile = [%s]' % tmpfileOut)
 
-
     # take example from https://github.com/kkroening/ffmpeg-python/blob/master/examples/README.md
     (
         ffmpeg
@@ -163,7 +169,7 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('url', nargs='?', help=(
         'The YouTube /watch url'
-        )
+    )
     )
     parser.add_argument(
         "-f", "--file", action="store", type=str, default='{name}.{ext}'.format(name=filename, ext='ini'), help=(
@@ -197,7 +203,7 @@ def get_arguments():
         )
     )
     parser.add_argument(
-        "-r", "--retry",action="store", type=int, default=3, help=(
+        "-r", "--retry", action="store", type=int, default=3, help=(
             "retry time when get file failed"
         )
     )
@@ -228,7 +234,7 @@ def get_arguments():
     print(args)
     if not (args.url or os.path.exists(args.file)):
         parser.print_help()
-        #sys.exit(1)
+        # sys.exit(1)
     return args
 
 
@@ -240,7 +246,8 @@ def unitest():
 
 def main():
     """Command line application to download and join youtube HQ video and audio."""
-    logger = set_logger(logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet)
+    logger = set_logger(logfile=args.logfile,
+                        verbosity=args.verbosity, quiet=args.quiet)
     logger.debug('System out encoding = [%s]' % sys.stdout.encoding)
 
     if not (args.url or os.path.exists(args.file)):
@@ -249,7 +256,7 @@ def main():
     downloads = []
     if args.url:
         downloads.append(args.url)
- 
+
     elif args.file:
         with open(args.file) as fp:
             for line in fp:
@@ -260,11 +267,13 @@ def main():
             logger.info("trying to download url = {0}".format(url))
             for i in range(1, args.retry+1):
                 try:
-                    audio, video = get_best_audio_video_from_youtube(url, args.retry)
+                    audio, video = get_best_audio_video_from_youtube(
+                        url, args.retry)
                     if all([audio, video, args.join]):
                         if audio_video_join(audio=audio, video=video, out=args.out, keep=args.keep, replace=args.replace):
-                            logger.info("Best video and audio joined successfully for url = {0}".format(url))
-                            if  args.file and (not args.listkeep):
+                            logger.info(
+                                "Best video and audio joined successfully for url = {0}".format(url))
+                            if args.file and (not args.listkeep):
                                 with open(args.file, "r") as f:
                                     lines = f.readlines()
                                 with open(args.file, "w") as f:
@@ -273,13 +282,13 @@ def main():
                                             f.write(line)
                             break
                 except:
-                    logger.exception('Unable to download Youtube from url = {0}'.format(url))
+                    logger.exception(
+                        'Unable to download Youtube from url = {0}'.format(url))
 
     return True
 
 
 if __name__ == "__main__":  # Only run if this file is called directly
-    #unitest()
+    # unitest()
     args = get_arguments()
     sys.exit(main())
-
