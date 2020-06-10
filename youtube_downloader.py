@@ -405,9 +405,12 @@ def get_target_itags(url, quality='NORMAL', mode='VIDEO_AUDIO'):
                     itag = result.group(1)
                     rank[itag] = int(filesize)
             except Exception as ex:
-                logger.error('Uable to get Video from URL = [%s]' % stream.url)
-                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                message = template.format(type(ex).__name__, ex.args)
+                logger.error('Uable to get Youtube Video :')
+                logger.error(url)
+                logger.error(stream.title)
+                logger.error(stream.url)
+                template = "An exception of type {0} occurred. Arguments:{1!r}"
+                message = template.format(type(ex).__name__, ex.args[0])
                 logger.error('Due to the reason = [%s]' % message)
 
         sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
@@ -763,7 +766,7 @@ def unitest():
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
-    #unitest()
+    unitest()
     main()
     #sys.exit(main())
 
