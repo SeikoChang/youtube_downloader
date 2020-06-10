@@ -321,7 +321,7 @@ def get_captions(yt, lang):
             if (lang == True) or (code.lower() == lang.lower()):
                 logger.debug('captions code = [%s]' % code)
                 caption.download(title=filename, srt=True,
-                                 output_path='./Youtube/')
+                                 output_path='Youtube')
                 # yt.captions.get_by_language_code(code).download(filename)
 
     except:
@@ -684,6 +684,7 @@ def main():
             if args.quality and args.mode:
                 itags = get_target_itags(
                     yt=yt, quality=args.quality, mode=args.mode)
+
             for i in range(1, args.retry+1):
                 if args.caption:
                     get_captions(yt, args.caption)
@@ -691,27 +692,30 @@ def main():
                 replace = args.replace
                 if len(itags) > 2:
                     # change replace mode to always False if mutiple target found
-                    logger.debug('target number of files = [%s]' % len(itags))
+                    logger.debug(
+                        "Youtube Vidoe/Audio from URL = [{0}] Contain Raw Files = [{1}]".format(url, len(itags)))
                     replace = False
+
                 for i, itag in enumerate(itags):
                     logger.debug('itag = [%s]' % itag)
                     filename = '{title}_{video}_{audio}_{fps}'.format(title=yt.streams.get_by_itag(itag).title, video=yt.streams.get_by_itag(
                         itag).resolution, audio=yt.streams.get_by_itag(itag).abr, fps=yt.streams.get_by_itag(itag).fps)
                     filename = yt.streams.get_by_itag(itag).download(
-                        output_path='./Youtube/', filename=filename)
+                        output_path='Youtube', filename=filename)
                     #filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
                     if filename:
                         logger.info(
                             "Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
-                        if args.file and (not args.listkeep):
-                            with open(args.file, "r") as f:
-                                lines = f.readlines()
-                            with open(args.file, "w") as f:
-                                for line in lines:
-                                    if line != url:
-                                        f.write(line)
                 else:
-                    break
+                    if args.file and (not args.listkeep):
+                        with open(args.file, "r") as f:
+                            lines = f.readlines()
+                        with open(args.file, "w") as f:
+                            for line in lines:
+                                if line != url:
+                                    f.write(line)
+            else:
+                break
 
     return True
 
@@ -785,6 +789,8 @@ def unitest():
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
+    args.quality = 'All'
+    args.mode = 'ALL'
     # unitest()
     main()
     # sys.exit(main())
