@@ -488,7 +488,7 @@ def display_progress_bar(bytes_received, filesize, ch='█', scale=0.55):
     sys.stdout.flush()
 
 
-def on_progress(stream, chunk, file_handle, bytes_remaining):
+def on_progress(stream, chunk, bytes_remaining):
     """On download progress callback function.
     :param object stream:
         An instance of :class:`Stream <Stream>` being downloaded.
