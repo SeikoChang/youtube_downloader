@@ -785,8 +785,6 @@ def unitest():
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
-    args.quality = 'All'
-    args.mode = 'ALL'
     # unitest()
     main()
     # sys.exit(main())
