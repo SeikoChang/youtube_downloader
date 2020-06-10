@@ -702,7 +702,7 @@ def main():
 def unitest():
     base = os.path.basename(__file__)
     filename, file_extension = os.path.splitext(base)
-    args.file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
+    test_file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
 
     #url = 'https://www.youtube.com/watch?v=F1fqet9V494'
     url = 'https://www.youtube.com/watch?v=xwsYvBYZcx4'
@@ -745,8 +745,7 @@ def unitest():
         main()
 
     args.url = url ; test3(); test2(); test1()
-    args.url = None
-    fp = to_unicode(args.file)
+    args.url = None ; args.file = test_file ; fp = to_unicode(args.file)
     with open(fp, mode='w+') as fh:
         fh.write(url)
     test4(); test5()
