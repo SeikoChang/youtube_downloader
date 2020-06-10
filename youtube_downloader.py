@@ -310,25 +310,18 @@ def is_playList(string):
 
 
 def get_captions(yt, lang):
+    filename = yt.streams.first().default_filename
     captions = None
     try:
         captions = yt.captions.all()
         logger.info('captions = %s' % captions)
-        p = re.compile('<Caption lang=".*" code="(.*)">')
         for caption in captions:
-            result = p.search(str(caption))
-            if result:
-                #code = result.group(1)
-                code = caption.code
-                if (lang == True) or (code.lower() == lang.lower()):
-                    logger.debug('captions code = [%s]' % code)
-                    #cap = caption.generate_srt_captions()
-                    filename = yt.streams.first().default_filename
-                    #name, ext = os.path.splitext(filename)
-                    #fp = to_unicode('{}_{}.txt'.format(name, code))
-                    #with open(fp, 'wb') as fh:
-                    #    fh.write(cap.encode('utf8'))
-                    caption.download(filename)
+            code = caption.code
+            if (lang == True) or (code.lower() == lang.lower()):
+                logger.debug('captions code = [%s]' % code)
+                caption.download(filename)
+                #yt.captions.get_by_language_code(code).download(filename)
+
     except:
         logger.warning('no any captions found!')
 
