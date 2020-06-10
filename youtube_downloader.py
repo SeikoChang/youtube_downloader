@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#chcp 65001       #转换为utf-8代码页
-#chcp 936           #转换为默认的gb
+# chcp 65001       #转换为utf-8代码页
+# chcp 936           #转换为默认的gb
 
 """A simple command line application to download youtube videos."""
 from __future__ import absolute_import
@@ -52,12 +52,12 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('url', nargs='?', help=(
         'The YouTube /watch url'
-        )
+    )
     )
 
     parser.add_argument('playlist', nargs='?', help=(
         'The YouTube playlist url, for example : "https://www.youtube.com/playlist?list={self.playlist_id}"'
-        )
+    )
     )
 
     parser.add_argument(
@@ -117,7 +117,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-r", "--retry",action="store", type=int, default=3, help=(
+        "-r", "--retry", action="store", type=int, default=3, help=(
             "retry time when get file failed"
         )
     )
@@ -183,10 +183,10 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     formatter = '%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s'
 
     logging.basicConfig(
-                    level=LogLevel,
-                    format=formatter,
-                    datefmt='%a %b %d %H:%M:%S CST %Y'
-                    )
+        level=LogLevel,
+        format=formatter,
+        datefmt='%a %b %d %H:%M:%S CST %Y'
+    )
 
     logger = logging.getLogger(__name__)
     logger.handlers = []
@@ -194,7 +194,8 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
 
     # new file handler
     if logfile:
-        handler = logging.FileHandler(filename=logfile, mode='a+', encoding='utf-8', delay=True)
+        handler = logging.FileHandler(
+            filename=logfile, mode='a+', encoding='utf-8', delay=True)
         handler.setLevel(LogLevel)
         # set logging format
         formatter = logging.Formatter(formatter)
@@ -256,9 +257,9 @@ def filename_fix_existing(filename):
     suffixes = [x.replace(name, '') for x in names]
     # filter suffixes that match ' (x)' pattern
     suffixes = [x[2:-1] for x in suffixes
-                   if x.startswith('_(') and x.endswith(')')]
-    indexes  = [int(x) for x in suffixes
-                   if set(x) <= set('0123456789')]
+                if x.startswith('_(') and x.endswith(')')]
+    indexes = [int(x) for x in suffixes
+               if set(x) <= set('0123456789')]
     idx = 1
     if indexes:
         idx += sorted(indexes)[-1]
@@ -320,7 +321,7 @@ def get_captions(yt, lang):
             if (lang == True) or (code.lower() == lang.lower()):
                 logger.debug('captions code = [%s]' % code)
                 caption.download(filename)
-                #yt.captions.get_by_language_code(code).download(filename)
+                # yt.captions.get_by_language_code(code).download(filename)
 
     except:
         logger.warning('no any captions found!')
@@ -378,9 +379,10 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     itags = [18]
     if mode and quality:
         if mode.upper() == 'VIDEO_AUDIO':
-            streams = yt.streams.filter(progressive=True).order_by('itag').all()
+            streams = yt.streams.filter(
+                progressive=True).order_by('itag').all()
         elif mode.upper() == 'VIDEO':
-            streams= yt.streams.filter(only_video=True).order_by('itag').all()
+            streams = yt.streams.filter(only_video=True).order_by('itag').all()
         elif mode.upper() == 'AUDIO':
             streams = yt.streams.filter(only_audio=True).order_by('itag').all()
         elif mode.upper() == 'ALL':
@@ -557,25 +559,29 @@ def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry
     # add numeric ' (x)' suffix if filename already exists
     if os.path.exists(filename):
         fsize = os.path.getsize(filename)
-        logger.info('filename = [%s] filesize = [%s] already exists in system' % (filename, fsize))
+        logger.info(
+            'filename = [%s] filesize = [%s] already exists in system' % (filename, fsize))
         if fsize == filesize:
             if skip:
-                logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (filename, fsize))
+                logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (
+                    filename, fsize))
                 return filename, thumbnail_url
             elif not replace:
                 filename = filename_fix_existing(filename)
         else:
             name, ext = os.path.splitext(filename)
             filename = filename_fix_existing(filename)
-            #TODO this workaround, need remove after
+            # TODO this workaround, need remove after
             # give second chance
             if skip:
                 try:
                     oldfilename = u'{}{}{}'.format(name, '_(1)', ext)
                     fsize = os.path.getsize(oldfilename)
-                    logger.debug('Trying to check filename = [%s] and filesize = [%s] if exists and match' % (oldfilename, fsize))
+                    logger.debug('Trying to check filename = [%s] and filesize = [%s] if exists and match' % (
+                        oldfilename, fsize))
                     if fsize == filesize:
-                        logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (oldfilename, fsize))
+                        logger.info('filename = [%s] filesize = [%s] already exists in system and skip download again' % (
+                            oldfilename, fsize))
                         return oldfilename, thumbnail_url
                 except:
                     pass
@@ -585,7 +591,8 @@ def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry
     logger.info('target local filesize = [%s]' % filesize)
 
     # create tmp file
-    (fd, tmpfile) = tempfile.mkstemp(suffix=ext, prefix="", dir=outdir, text=False)
+    (fd, tmpfile) = tempfile.mkstemp(
+        suffix=ext, prefix="", dir=outdir, text=False)
     tmpfile = to_unicode(tmpfile)
     os.close(fd)
     os.unlink(tmpfile)
@@ -594,7 +601,8 @@ def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry
     tmpname, tmpext = os.path.splitext(tmpbase)
 
     try:
-        stream.download(output_path=tmppath, filename=tmpname, filename_prefix=None, skip_existing=skip)
+        stream.download(output_path=tmppath, filename=tmpname,
+                        filename_prefix=None, skip_existing=skip)
         sys.stdout.write('\n')
         shutil.move(tmpfile, filename)
         logger.info("File = [{0}] Saved".format(filename))
@@ -607,7 +615,8 @@ def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry
 
 def main():
     """Command line application to download youtube videos."""
-    logger = set_logger(logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet)
+    logger = set_logger(logfile=args.logfile,
+                        verbosity=args.verbosity, quiet=args.quiet)
     logger.debug('System out encoding = [%s]' % sys.stdout.encoding)
 
     if not (args.url or args.playlist or os.path.exists(args.file)):
@@ -631,7 +640,7 @@ def main():
     elif args.playlist:
         playlist = Playlist(args.playlist)
         for video in playlist:
-            #video.streams.get_highest_resolution().download()
+            # video.streams.get_highest_resolution().download()
             downloads.append(video)
 
     elif args.file:
@@ -657,7 +666,8 @@ def main():
             # Get Youtube Object with correct filename
             for i in range(1, args.retry+1):
                 try:
-                    yt = YouTube(url, on_progress_callback=on_progress, proxies=proxy_params)
+                    yt = YouTube(
+                        url, on_progress_callback=on_progress, proxies=proxy_params)
                     stream = yt.streams.get_by_itag(args.itag)
                     filename = to_unicode(stream.default_filename)
                     if 'YouTube' not in filename:
@@ -671,7 +681,8 @@ def main():
                 continue
 
             if args.quality and args.mode:
-                itags = get_target_itags(yt=yt, quality=args.quality, mode=args.mode)
+                itags = get_target_itags(
+                    yt=yt, quality=args.quality, mode=args.mode)
             for i in range(1, args.retry+1):
                 if args.caption:
                     get_captions(yt, args.caption)
@@ -686,8 +697,9 @@ def main():
                     filename = yt.streams.get_by_itag(itag).download()
                     #filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
                     if filename:
-                        logger.info("Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
-                        if  args.file and (not args.listkeep):
+                        logger.info(
+                            "Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
+                        if args.file and (not args.listkeep):
                             with open(args.file, "r") as f:
                                 lines = f.readlines()
                             with open(args.file, "w") as f:
@@ -703,27 +715,31 @@ def main():
 def unitest():
     base = os.path.basename(__file__)
     filename, file_extension = os.path.splitext(base)
-    test_file ='{name}.{ext}_unittest'.format(name=filename, ext='ini')
+    test_file = '{name}.{ext}_unittest'.format(name=filename, ext='ini')
 
     #url = 'https://www.youtube.com/watch?v=F1fqet9V494'
     url = 'https://www.youtube.com/watch?v=xwsYvBYZcx4'
     playlist = 'https://www.youtube.com/playlist?list=PLteWjpkbvj7rUU5SFt2BlNVCQqkjulPZR'
 
     def test1():
-        logger.info("Testing with 'display_streams()' for url =  {0}".format(url))
+        logger.info(
+            "Testing with 'display_streams()' for url =  {0}".format(url))
         args.list = True
         main()
 
     def test2():
-        logger.info("Testing with 'build_playback_report()' for url = {0}".format(url))
+        logger.info(
+            "Testing with 'build_playback_report()' for url = {0}".format(url))
         args.build_playback_report = True
         main()
 
     def test3():
-        logger.info("Testing with 'get_captions(lang=zh-TW)' for url = {0}".format(url))
+        logger.info(
+            "Testing with 'get_captions(lang=zh-TW)' for url = {0}".format(url))
         args.caption = 'zh-TW'
         main()
-        logger.info("Testing with 'get_captions(lang=True)' for url = {0}".format(url))
+        logger.info(
+            "Testing with 'get_captions(lang=True)' for url = {0}".format(url))
         args.caption = True
         main()
 
@@ -745,20 +761,26 @@ def unitest():
         args.playlist = playlist
         main()
 
-    args.url = url ; test3(); test2(); test1()
-    args.url = None ; args.file = test_file ; fp = to_unicode(args.file)
+    args.url = url
+    test3()
+    test2()
+    test1()
+    args.url = None
+    args.file = test_file
+    fp = to_unicode(args.file)
     with open(fp, mode='w+') as fh:
         fh.write(url)
-    test4(); test5()
+    test4()
+    test5()
 
     test6()
     with open(fp, mode='w+') as fh:
         fh.write(playlist)
     test4()
 
+
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
-    #unitest()
+    # unitest()
     main()
-    #sys.exit(main())
-
+    # sys.exit(main())
