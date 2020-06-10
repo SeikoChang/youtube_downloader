@@ -395,22 +395,21 @@ def get_target_itags(url, quality='NORMAL', mode='VIDEO_AUDIO'):
         else:
             return itags
 
-        p = re.compile('.*itag=\"(.*)\" mime_type=.*')
         rank = {}
         for stream in streams:
             try:
                 filesize = stream.filesize
-                result = p.search(str(stream))
-                if result:
-                    itag = result.group(1)
-                    rank[itag] = int(filesize)
+                itag = stream.itag
+                rank[itag] = int(filesize)
             except Exception as ex:
                 logger.error('Uable to get Youtube Video :')
                 logger.error(url)
                 logger.error(stream.title)
+                logger.error(stream.itag)
+                logger.error(stream.filesize_approx)
                 logger.error(stream.url)
                 template = "An exception of type {0} occurred. Arguments:{1!r}"
-                message = template.format(type(ex).__name__, ex.args[0])
+                message = template.format(type(ex).__name__, ex.args)
                 logger.error('Due to the reason = [%s]' % message)
 
         sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
