@@ -749,7 +749,7 @@ def unitest():
     fp = to_unicode(args.file)
     with open(fp, mode='w+') as fh:
         fh.write(url)
-    test4();test5()
+    test4(); test5()
 
     test6()
     with open(fp, mode='w+') as fh:
@@ -758,7 +758,7 @@ def unitest():
 
 if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
-    unitest()
+    #unitest()
     main()
     #sys.exit(main())
 
