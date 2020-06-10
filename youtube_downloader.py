@@ -683,7 +683,8 @@ def main():
                     replace = False
                 for i, itag in enumerate(itags):
                     logger.debug('itag = [%s]' % itag)
-                    filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
+                    filename = yt.streams.get_by_itag(itag).download()
+                    #filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
                     if filename:
                         logger.info("Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
                         if  args.file and (not args.listkeep):
