@@ -318,15 +318,17 @@ def get_captions(yt, lang):
         for caption in captions:
             result = p.search(str(caption))
             if result:
-                code = result.group(1)
+                #code = result.group(1)
+                code = caption.code
                 if (lang == True) or (code.lower() == lang.lower()):
                     logger.debug('captions code = [%s]' % code)
-                    cap = caption.generate_srt_captions()
+                    #cap = caption.generate_srt_captions()
                     filename = yt.streams.first().default_filename
-                    name, ext = os.path.splitext(filename)
-                    fp = to_unicode('{}_{}.txt'.format(name, code))
-                    with open(fp, 'wb') as fh:
-                        fh.write(cap.encode('utf8'))
+                    #name, ext = os.path.splitext(filename)
+                    #fp = to_unicode('{}_{}.txt'.format(name, code))
+                    #with open(fp, 'wb') as fh:
+                    #    fh.write(cap.encode('utf8'))
+                    caption.download(filename)
     except:
         logger.warning('no any captions found!')
 
