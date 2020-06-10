@@ -698,8 +698,17 @@ def main():
 
                 for i, itag in enumerate(itags):
                     logger.debug('itag = [%s]' % itag)
-                    filename = '{title}_{video}_{audio}_{fps}'.format(title=yt.streams.get_by_itag(itag).title, video=yt.streams.get_by_itag(
-                        itag).resolution, audio=yt.streams.get_by_itag(itag).abr, fps=yt.streams.get_by_itag(itag).fps)
+                    stream = yt.streams.get_by_itag(itag)
+                    title = stream.title
+                    resolution = stream.resolution
+                    video_codec = stream.video_codec
+                    abr = stream.abr
+                    audio_codec = stream.audio_codec
+                    fps = stream.fps
+                    bitrate = stream.bitrate
+                    filesize = stream.filesize
+                    filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
+                        title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
                     filename = yt.streams.get_by_itag(itag).download(
                         output_path='Youtube', filename=filename)
                     #filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
