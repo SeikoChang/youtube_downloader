@@ -28,6 +28,7 @@ from pytube import __version__
 from pytube import YouTube
 from pytube import Playlist
 from pytube.helpers import regex_search
+#from pytube import cli
 
 PY3K = sys.version_info >= (3, 0)
 if PY3K:
@@ -39,8 +40,6 @@ else:
 
 
 logger = logging.getLogger(__name__)
-
-output_path = "Youtube"
 
 
 def get_arguments():
@@ -164,6 +163,40 @@ def get_arguments():
         "-cap", "--caption", action="store_true", help=(
             "download all available caption for all languages if available \
              or download specific language caption only"
+        )
+    )
+
+    parser.add_argument(
+        "-tar",
+        "--target",
+        action="store",
+        type=str,
+        default="Youtube",
+        help=(
+            "The output directory for the downloaded stream. "
+            "Default is current working directory"
+        ),
+    )
+
+    parser.add_argument(
+        "-j",
+        "--join",
+        type=str2bool,
+        nargs='?',
+        const=True,
+        help=(
+            "join original best audio/video files"
+        )
+    )
+
+    parser.add_argument(
+        "-fkp",
+        "--filekeep",
+        type=str2bool,
+        nargs='?',
+        const=True,
+        help=(
+            "keep original audio/video files after joined"
         )
     )
 
@@ -346,12 +379,12 @@ def display_streams(url):
     :param str url:
         A valid YouTube watch URL.
     """
-    streams = []
+    streams = list()
     try:
         yt = YouTube(url)
-        for stream in yt.streams.all():
+        for stream in yt.streams:
             streams.append(stream)
-            print(stream)
+            logger.debug(stream)
     except:
         logger.error('Unable to list all streams from Video = [%s]' % url)
 
@@ -583,7 +616,7 @@ def get_captions(yt, lang):
                 logger.info(
                     'downloading captions for language code = [%s]' % code)
                 filepath = yt.captions[code].download(
-                    title=filename, srt=True, output_path=output_path)
+                    title=filename, srt=True, output_path=args.target)
                 logger.info(
                     'captions downloaded = [%s]' % filepath)
 
@@ -715,7 +748,7 @@ def download_youtube_by_itag(yt, itag):
         title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
 
     filepath = yt.streams.get_by_itag(itag).download(
-        output_path=output_path, filename=filename)
+        output_path=args.target, filename=filename)
 
     return filepath
 
@@ -733,9 +766,11 @@ def main():
     downloads = list()
     if args.list:
         display_streams(args.url)
-    elif args.build_playback_report:
+
+    if args.build_playback_report:
         build_playback_report(args.url)
-    elif args.file or args.playlist or args.file:
+
+    if args.file or args.playlist or args.file:
         downloads = get_url_list(args)
         for url in downloads:
             start_url = time.time()
@@ -760,10 +795,15 @@ def main():
                     duration = end_itag - start_itag
                     logger.debug(
                         ("URL processing finished, execution in [%s] seconds") % (duration))
+
                 # update items in ini file
                 else:
                     if args.file and (not args.listkeep):
                         update_item_in_file(args.file, item=url)
+
+                # join video/audio if required
+                if args.join:
+                    cli.ffmpeg_process(youtube=yt, resolution='best', target=args.target)
 
                 # break retry level here
                 break
@@ -777,6 +817,7 @@ def main():
             duration = end_url - start_url
             logger.debug(
                 ("URL processing finished, execution in [%s] seconds") % (duration))
+
         # finish all downloads
         else:
             logger.info(
