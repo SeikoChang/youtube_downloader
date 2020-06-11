@@ -40,6 +40,8 @@ else:
 
 logger = logging.getLogger(__name__)
 
+output_path = "Youtube"
+
 
 def get_arguments():
     print(main.__doc__)
@@ -68,7 +70,7 @@ def get_arguments():
 
     parser.add_argument(
         "-lkp", "--listkeep", type=str2bool, nargs='?', const=False, help=(
-            "idenfify if keep item in -f --file {file} after successfully download file"
+            "identify if keep item in -f --file {file} after successfully download file"
         )
     )
 
@@ -104,7 +106,7 @@ def get_arguments():
 
     parser.add_argument(
         "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if replace the existed file with the same filename \
+            "identify if replace the existed file with the same filename \
             or download new file with prefix file name, \
             this only be taken when skip = False"
         )
@@ -112,7 +114,7 @@ def get_arguments():
 
     parser.add_argument(
         "-sp", "--skip", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if skip the existed file"
+            "identify if skip the existed file"
         )
     )
 
@@ -136,7 +138,7 @@ def get_arguments():
 
     parser.add_argument(
         "-q", "--quiet", type=str2bool, nargs='?', const=True, help=(
-            "idenfify if enable the silent mode"
+            "identify if enable the silent mode"
         )
     )
 
@@ -147,20 +149,20 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-qt", "--quality", type=str, choices=['HIGH', 'NORMAL', 'LOW', 'ALL'], help=(
+        "-qt", "--quality", default='NORMAL', const='NORMAL', nargs='?', type=str, choices=['HIGH', 'NORMAL', 'LOW', 'ALL'], help=(
             "choose the quality of video to download"
         )
     )
 
     parser.add_argument(
-        "-m", "--mode", type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
+        "-m", "--mode", default='VIDEO_AUDIO', const='VIDEO_AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
             "choose only video/audio or video and audio together"
         )
     )
 
     parser.add_argument(
         "-cap", "--caption", action="store_true", help=(
-            "download all available cpation for all languages if available \
+            "download all available caption for all languages if available \
              or download specific language caption only"
         )
     )
@@ -208,8 +210,8 @@ def set_logger(logfile=None, verbosity='WARNING', quiet=False):
     else:
         logging.disable(logging.NOTSET)
 
-    #module = sys.modules['__main__'].__file__
-    #logger = logging.getLogger(module)
+    # module = sys.modules['__main__'].__file__
+    # logger = logging.getLogger(module)
 
     return logger
 
@@ -222,7 +224,7 @@ def loglevel_converter(loglevel):
 
 
 def median(lst):
-    #sortedLst = sorted(lst)
+    # sortedLst = sorted(lst)
     lstLen = len(lst)
     index = (lstLen - 1) // 2
 
@@ -311,23 +313,31 @@ def is_playList(string):
 
 
 def get_captions(yt, lang):
-    filename = yt.streams.first().default_filename
-    captions = None
-    try:
-        captions = yt.captions.all()
-        logger.info('captions = %s' % captions)
-        for caption in captions:
-            code = caption.code
+    if lang:
+        filename = to_unicode(yt.streams.first().default_filename)
+        codes = query_captions_codes(yt)
+        for code in codes:
             if (lang == True) or (code.lower() == lang.lower()):
-                logger.debug('captions code = [%s]' % code)
-                caption.download(title=filename, srt=True,
-                                 output_path='Youtube')
-                # yt.captions.get_by_language_code(code).download(filename)
+                logger.info(
+                    'downloading captions for language code = [%s]' % code)
+                filepath = yt.captions.get_by_language_code(code).download(
+                    title=filename, srt=True, output_path=output_path)
+                logger.info(
+                    'captions downloaded = [%s]' % filepath)
 
-    except:
-        logger.warning('no any captions found!')
+    return True
 
-    return captions
+
+def query_captions_codes(yt):
+    codes = []
+    captions = yt.captions.all()
+    for caption in captions:
+        logger.debug('captions = %s' % captions)
+        code = caption.code
+        logger.debug('code = [%s]' % code)
+        codes.append(code)
+
+    return codes
 
 
 def build_playback_report(url):
@@ -614,36 +624,16 @@ def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry
     return (filename, thumbnail_url)
 
 
-def main():
-    """Command line application to download youtube videos."""
-    logger = set_logger(logfile=args.logfile,
-                        verbosity=args.verbosity, quiet=args.quiet)
-    logger.debug('System out encoding = [%s]' % sys.stdout.encoding)
-
-    if not (args.url or args.playlist or os.path.exists(args.file)):
-        sys.exit(1)
-
-    if args.proxy:
-        logger.info('via proxy = [%s]' % args.proxy)
-        proxy_params = {urlparse.urlparse(args.url).scheme: args.proxy}
-    else:
-        proxy_params = None
-
+def get_url_list(args):
     downloads = []
     if args.url:
-        if args.list:
-            display_streams(args.url)
-        elif args.build_playback_report:
-            build_playback_report(args.url)
-        elif args.itag:
+        if args.itag:
             downloads.append(args.url)
-
     elif args.playlist:
         playlist = Playlist(args.playlist)
         for video in playlist:
             # video.streams.get_highest_resolution().download()
             downloads.append(video)
-
     elif args.file:
         with open(args.file, "r") as fp:
             for line in fp:
@@ -654,77 +644,118 @@ def main():
                     for video in playlist:
                         downloads.append(video + '\n')
 
-        logger.debug('downloads = %s' % downloads)
+        logger.debug('All required download URLs = %s' % downloads)
         with open(args.file, "w") as f:
             for url in downloads:
                 f.write(url)
 
-    if len(downloads) > 0:
-        itags = [args.itag]
+    return downloads
+
+
+def get_correct_yt(url):
+    yt = None
+    # Get Youtube Object with correct filename
+
+    if args.proxy:
+        logger.info('via proxy = [%s]' % args.proxy)
+        proxy_params = {urlparse.urlparse(args.url).scheme: args.proxy}
+    else:
+        proxy_params = None
+
+    for i in range(1, args.retry+1):
+        try:
+            yt = YouTube(
+                url, on_progress_callback=on_progress, proxies=proxy_params)
+            filename = to_unicode(yt.streams.first().default_filename)
+            if 'YouTube' not in filename:
+                break
+        except Exception as ex:
+            logger.error('Unable to get FileName from = [%s]' % url)
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            logger.error('Due to the reason = [%s]' % message)
+
+    return yt
+
+
+def update_item_in_file(file, item):
+    with open(file, "r") as f:
+        lines = f.readlines()
+    with open(file, "w") as f:
+        for line in lines:
+            if line != item:
+                f.write(line)
+
+
+def download_youtube_by_itag(yt, itag):
+    filepath = None
+    url = yt.watch_url
+    stream = yt.streams.get_by_itag(itag)
+    title = stream.title
+    resolution = stream.resolution
+    video_codec = stream.video_codec
+    abr = stream.abr
+    audio_codec = stream.audio_codec
+    fps = stream.fps
+    bitrate = stream.bitrate
+    filesize = stream.filesize
+    filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
+        title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
+
+    filepath = yt.streams.get_by_itag(itag).download(
+        output_path=output_path, filename=filename)
+    if filepath:
+        logger.info(
+            "Youtube Video/Audio from URL = [{url}] downloaded successfully to [{filepath}]".format(url=url, filepath=filepath))
+
+    return filepath
+
+
+def main():
+    """Command line application to download youtube videos."""
+    logger = set_logger(logfile=args.logfile,
+                        verbosity=args.verbosity, quiet=args.quiet)
+    logger.debug('System out encoding = [%s]' % sys.stdout.encoding)
+
+    if not (args.url or args.playlist or os.path.exists(args.file)):
+        sys.exit(1)
+
+    downloads = []
+    if args.list:
+        display_streams(args.url)
+    elif args.build_playback_report:
+        build_playback_report(args.url)
+    elif args.file or args.playlist or args.file:
+        downloads = get_url_list(args)
         for url in downloads:
-            logger.info("trying to download url = {0}".format(url))
-
-            # Get Youtube Object with correct filename
+            logger.info("Trying to download URL = {url}".format(url=url))
             for i in range(1, args.retry+1):
-                try:
-                    yt = YouTube(
-                        url, on_progress_callback=on_progress, proxies=proxy_params)
-                    stream = yt.streams.get_by_itag(args.itag)
-                    filename = to_unicode(stream.default_filename)
-                    if 'YouTube' not in filename:
-                        break
-                except Exception as ex:
-                    logger.error('Uable to get FileName from = [%s]' % url)
-                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                    message = template.format(type(ex).__name__, ex.args)
-                    logger.error('Due to the reason = [%s]' % message)
-            else:
-                continue
+                yt = get_correct_yt(url)
 
-            if args.quality and args.mode:
+                get_captions(yt, args.caption)
+
                 itags = get_target_itags(
                     yt=yt, quality=args.quality, mode=args.mode)
 
-            for i in range(1, args.retry+1):
-                if args.caption:
-                    get_captions(yt, args.caption)
-
-                replace = args.replace
-                if len(itags) > 2:
-                    # change replace mode to always False if mutiple target found
-                    logger.debug(
-                        "Youtube Vidoe/Audio from URL = [{0}] Contain Raw Files = [{1}]".format(url, len(itags)))
-                    replace = False
-
+                # download target youtube
                 for i, itag in enumerate(itags):
-                    logger.debug('itag = [%s]' % itag)
-                    stream = yt.streams.get_by_itag(itag)
-                    title = stream.title
-                    resolution = stream.resolution
-                    video_codec = stream.video_codec
-                    abr = stream.abr
-                    audio_codec = stream.audio_codec
-                    fps = stream.fps
-                    bitrate = stream.bitrate
-                    filesize = stream.filesize
-                    filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
-                        title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
-                    filename = yt.streams.get_by_itag(itag).download(
-                        output_path='Youtube', filename=filename)
-                    #filename = download(yt=yt, itag=itag, out=args.out, replace=replace, skip=args.skip, proxies=proxy_params)
-                    if filename:
-                        logger.info(
-                            "Youtube Vidoe/Audio from URL = [{0}] downloaded successfully to [{1}]".format(url, filename))
+                    download_youtube_by_itag(yt, itag)
+                # update items in ini file
                 else:
                     if args.file and (not args.listkeep):
-                        with open(args.file, "r") as f:
-                            lines = f.readlines()
-                        with open(args.file, "w") as f:
-                            for line in lines:
-                                if line != url:
-                                    f.write(line)
-            else:
+                        update_item_in_file(args.file, item=url)
+
+                # break retry level here
                 break
+
+            # failed after retry multiple times
+            else:
+                logger.fatal(
+                    "Download Youtube Video/Audio from URL = [{0}] FAILED".format(url))
+        # finish all downloads
+        else:
+            logger.info(
+                "Download all Youtube Video/Audio, there are total URLs = [{0}] to be processed".format(len(downloads)))
 
     return True
 
@@ -734,7 +765,7 @@ def unitest():
     filename, file_extension = os.path.splitext(base)
     test_file = '{name}.{ext}_unittest'.format(name=filename, ext='ini')
 
-    #url = 'https://www.youtube.com/watch?v=F1fqet9V494'
+    # url = 'https://www.youtube.com/watch?v=F1fqet9V494'
     url = 'https://www.youtube.com/watch?v=xwsYvBYZcx4'
     playlist = 'https://www.youtube.com/playlist?list=PLteWjpkbvj7rUU5SFt2BlNVCQqkjulPZR'
 
