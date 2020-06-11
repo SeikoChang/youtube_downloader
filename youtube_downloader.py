@@ -329,7 +329,7 @@ def get_captions(yt, lang):
 
 
 def query_captions_codes(yt):
-    codes = []
+    codes = list()
     captions = yt.captions.all()
     for caption in captions:
         logger.debug('captions = %s' % captions)
@@ -625,7 +625,7 @@ def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry
 
 
 def get_url_list(args):
-    downloads = []
+    downloads = list()
     if args.url:
         if args.itag:
             downloads.append(args.url)
@@ -704,9 +704,6 @@ def download_youtube_by_itag(yt, itag):
 
     filepath = yt.streams.get_by_itag(itag).download(
         output_path=output_path, filename=filename)
-    if filepath:
-        logger.info(
-            "Youtube Video/Audio from URL = [{url}] downloaded successfully to [{filepath}]".format(url=url, filepath=filepath))
 
     return filepath
 
@@ -720,7 +717,7 @@ def main():
     if not (args.url or args.playlist or os.path.exists(args.file)):
         sys.exit(1)
 
-    downloads = []
+    downloads = list()
     if args.list:
         display_streams(args.url)
     elif args.build_playback_report:
@@ -731,7 +728,7 @@ def main():
             logger.info("Trying to download URL = {url}".format(url=url))
             for i in range(1, args.retry+1):
                 yt = get_correct_yt(url)
-
+                logger.info("Title = {title}".format(title=yt.title))
                 get_captions(yt, args.caption)
 
                 itags = get_target_itags(
@@ -739,7 +736,11 @@ def main():
 
                 # download target youtube
                 for i, itag in enumerate(itags):
-                    download_youtube_by_itag(yt, itag)
+                    filepath = download_youtube_by_itag(yt, itag)
+                    if filepath:
+                        logger.info(
+                            "Successfully download to {filepath}".format(filepath=filepath))
+
                 # update items in ini file
                 else:
                     if args.file and (not args.listkeep):
@@ -751,11 +752,11 @@ def main():
             # failed after retry multiple times
             else:
                 logger.fatal(
-                    "Download Youtube Video/Audio from URL = [{0}] FAILED".format(url))
+                    "Download Youtube Video/Audio from URL = [{url}] FAILED".format(url=url))
         # finish all downloads
         else:
             logger.info(
-                "Download all Youtube Video/Audio, there are total URLs = [{0}] to be processed".format(len(downloads)))
+                "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(downloads)))
 
     return True
 
