@@ -648,32 +648,30 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     else:
         return itags
 
-    end_stream = time.time()
-    logger.debug("take = [{time}] secs".format(time=end_stream-start))
-    rank = {}
-    for stream in streams:
-        try:
-            filesize = stream.filesize
-            itag = stream.itag
-            rank[itag] = int(filesize)
-        except Exception as ex:
-            logger.error('Uable to get Youtube Video :')
-            logger.error(yt.watch_url)
-            logger.error(stream.title)
-            logger.error(stream.itag)
-            logger.error(stream.filesize_approx)
-            logger.error(stream.url)
-            template = "An exception of type {0} occurred. Arguments:{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            logger.error('Due to the reason = [%s]' % message)
+    end_streams = time.time()
+    logger.debug("take = [{time}] secs".format(time=end_streams-start))
 
-    end_itags = time.time()
-    logger.debug("take = [{time}] secs".format(time=end_itags-start))
+    rank = {
+        itag: streams.itag_index[itag].filesize for itag in streams.itag_index if isinstance(streams.itag_index[itag].filesize, int)}
+    end_rank = time.time()
+    logger.debug("generate rank take = [{time}] secs".format(
+        time=end_rank-start))
+    logger.debug(rank)
+
+    # block below temporary because the performance is the same same comparing above one line sentence.
+    #rank = dict()
+    # for itag in streams.itag_index:
+    #    itag_filesize = streams.itag_index[itag].filesize
+    #    if isinstance(itag_filesize, int):
+    #        rank[itag] = int(itag_filesize)
+    #    end_stream = time.time()
+    #    logger.debug("take = [{time}] secs".format(time=end_stream-start))
+    #end_rank = time.time()
+    #logger.debug("generate rank take = [{time}] secs".format(time=end_rank-start))
+    # logger.debug(rank)
 
     sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
-
-    end_sort = time.time()
-    logger.debug("take = [{time}] secs".format(time=end_sort-start))
+    logger.debug(sorted_rank)
 
     if quality.upper() == 'HIGH':
         itags = [sorted_rank[-1][0]]
@@ -682,12 +680,13 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     elif quality.upper() == 'LOW':
         itags = [sorted_rank[0][0]]
     elif quality.upper() == 'ALL':
-        itags = rank.keys()
+        itags = sorted_rank.keys()
     else:
         return itags
 
-    end_quality = time.time()
-    logger.debug("take = [{time}] secs".format(time=end_quality-start))
+    end = time.time()
+    logger.debug(
+        "get_target_itags() take = [{time}] secs".format(time=end-start))
     return itags
 
 
@@ -744,7 +743,7 @@ def main():
             for i in range(1, args.retry+1):
                 yt = get_correct_yt(url)
                 logger.info("Title = {title}".format(title=yt.title))
-                get_captions(yt, True)
+                get_captions(yt, args.caption)
 
                 itags = get_target_itags(
                     yt=yt, quality=args.quality, mode=args.mode)
