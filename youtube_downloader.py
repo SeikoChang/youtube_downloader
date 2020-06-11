@@ -312,34 +312,6 @@ def is_playList(string):
     return (f"playlist?list=" in string)
 
 
-def get_captions(yt, lang):
-    if lang:
-        filename = to_unicode(yt.streams.first().default_filename)
-        codes = query_captions_codes(yt)
-        for code in codes:
-            if (lang == True) or (code.lower() == lang.lower()):
-                logger.info(
-                    'downloading captions for language code = [%s]' % code)
-                filepath = yt.captions.get_by_language_code(code).download(
-                    title=filename, srt=True, output_path=output_path)
-                logger.info(
-                    'captions downloaded = [%s]' % filepath)
-
-    return True
-
-
-def query_captions_codes(yt):
-    codes = list()
-    captions = yt.captions.all()
-    for caption in captions:
-        logger.debug('captions = %s' % captions)
-        code = caption.code
-        logger.debug('code = [%s]' % code)
-        codes.append(code)
-
-    return codes
-
-
 def build_playback_report(url):
     """Serialize the request data to json for offline debugging.
     :param str url:
@@ -384,54 +356,6 @@ def display_streams(url):
         logger.error('Unable to list all streams from Video = [%s]' % url)
 
     return streams
-
-
-def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
-    itags = [18]
-    if mode and quality:
-        if mode.upper() == 'VIDEO_AUDIO':
-            streams = yt.streams.filter(
-                progressive=True).order_by('itag').all()
-        elif mode.upper() == 'VIDEO':
-            streams = yt.streams.filter(only_video=True).order_by('itag').all()
-        elif mode.upper() == 'AUDIO':
-            streams = yt.streams.filter(only_audio=True).order_by('itag').all()
-        elif mode.upper() == 'ALL':
-            streams = yt.streams.all()
-        else:
-            return itags
-
-        rank = {}
-        for stream in streams:
-            try:
-                filesize = stream.filesize
-                itag = stream.itag
-                rank[itag] = int(filesize)
-            except Exception as ex:
-                logger.error('Uable to get Youtube Video :')
-                logger.error(yt.watch_url)
-                logger.error(stream.title)
-                logger.error(stream.itag)
-                logger.error(stream.filesize_approx)
-                logger.error(stream.url)
-                template = "An exception of type {0} occurred. Arguments:{1!r}"
-                message = template.format(type(ex).__name__, ex.args)
-                logger.error('Due to the reason = [%s]' % message)
-
-        sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
-
-        if quality.upper() == 'HIGH':
-            itags = [sorted_rank[-1][0]]
-        elif quality.upper() == 'NORMAL':
-            itags = [median(sorted_rank)[0]]
-        elif quality.upper() == 'LOW':
-            itags = [sorted_rank[0][0]]
-        elif quality.upper() == 'ALL':
-            itags = rank.keys()
-        else:
-            return itags
-
-    return itags
 
 
 def get_terminal_size_windows():
@@ -515,6 +439,32 @@ def on_progress(stream, chunk, bytes_remaining):
     filesize = stream.filesize
     bytes_received = filesize - bytes_remaining
     display_progress_bar(bytes_received, filesize)
+
+
+def get_correct_yt(url):
+    yt = None
+    # Get Youtube Object with correct filename
+
+    if args.proxy:
+        logger.info('via proxy = [%s]' % args.proxy)
+        proxy_params = {urlparse.urlparse(args.url).scheme: args.proxy}
+    else:
+        proxy_params = None
+
+    for i in range(1, args.retry+1):
+        try:
+            yt = YouTube(
+                url, on_progress_callback=on_progress, proxies=proxy_params)
+            filename = to_unicode(yt.streams.first().default_filename)
+            if 'YouTube' not in filename:
+                break
+        except Exception as ex:
+            logger.error('Unable to get FileName from = [%s]' % url)
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            logger.error('Due to the reason = [%s]' % message)
+
+    return yt
 
 
 def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry=10):
@@ -624,6 +574,35 @@ def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry
     return (filename, thumbnail_url)
 
 
+def get_captions(yt, lang):
+    if lang:
+        filename = to_unicode(yt.streams.first().default_filename)
+        codes = query_captions_codes(yt)
+        for code in codes:
+            if (lang == True) or (code.lower() == lang.lower()):
+                logger.info(
+                    'downloading captions for language code = [%s]' % code)
+                filepath = yt.captions[code].download(
+                    title=filename, srt=True, output_path=output_path)
+                logger.info(
+                    'captions downloaded = [%s]' % filepath)
+
+    return True
+
+
+def query_captions_codes(yt):
+    codes = list()
+    captions = yt.captions.all()
+    logger.debug('captions = %s' % captions)
+    for caption in captions:
+        logger.debug('caption = %s' % caption)
+        code = caption.code
+        logger.debug('code = [%s]' % code)
+        codes.append(code)
+
+    return codes
+
+
 def get_url_list(args):
     downloads = list()
     if args.url:
@@ -652,30 +631,64 @@ def get_url_list(args):
     return downloads
 
 
-def get_correct_yt(url):
-    yt = None
-    # Get Youtube Object with correct filename
+def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
+    itags = list()
+    itags.append(18)
 
-    if args.proxy:
-        logger.info('via proxy = [%s]' % args.proxy)
-        proxy_params = {urlparse.urlparse(args.url).scheme: args.proxy}
+    start = time.time()
+    if mode.upper() == 'VIDEO_AUDIO':
+        streams = yt.streams.filter(
+            progressive=True).order_by('itag').all()
+    elif mode.upper() == 'VIDEO':
+        streams = yt.streams.filter(only_video=True).order_by('itag').all()
+    elif mode.upper() == 'AUDIO':
+        streams = yt.streams.filter(only_audio=True).order_by('itag').all()
+    elif mode.upper() == 'ALL':
+        streams = yt.streams
     else:
-        proxy_params = None
+        return itags
 
-    for i in range(1, args.retry+1):
+    end_stream = time.time()
+    logger.debug("take = [{time}] secs".format(time=end_stream-start))
+    rank = {}
+    for stream in streams:
         try:
-            yt = YouTube(
-                url, on_progress_callback=on_progress, proxies=proxy_params)
-            filename = to_unicode(yt.streams.first().default_filename)
-            if 'YouTube' not in filename:
-                break
+            filesize = stream.filesize
+            itag = stream.itag
+            rank[itag] = int(filesize)
         except Exception as ex:
-            logger.error('Unable to get FileName from = [%s]' % url)
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            logger.error('Uable to get Youtube Video :')
+            logger.error(yt.watch_url)
+            logger.error(stream.title)
+            logger.error(stream.itag)
+            logger.error(stream.filesize_approx)
+            logger.error(stream.url)
+            template = "An exception of type {0} occurred. Arguments:{1!r}"
             message = template.format(type(ex).__name__, ex.args)
             logger.error('Due to the reason = [%s]' % message)
 
-    return yt
+    end_itags = time.time()
+    logger.debug("take = [{time}] secs".format(time=end_itags-start))
+
+    sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
+
+    end_sort = time.time()
+    logger.debug("take = [{time}] secs".format(time=end_sort-start))
+
+    if quality.upper() == 'HIGH':
+        itags = [sorted_rank[-1][0]]
+    elif quality.upper() == 'NORMAL':
+        itags = [median(sorted_rank)[0]]
+    elif quality.upper() == 'LOW':
+        itags = [sorted_rank[0][0]]
+    elif quality.upper() == 'ALL':
+        itags = rank.keys()
+    else:
+        return itags
+
+    end_quality = time.time()
+    logger.debug("take = [{time}] secs".format(time=end_quality-start))
+    return itags
 
 
 def update_item_in_file(file, item):
@@ -709,6 +722,7 @@ def download_youtube_by_itag(yt, itag):
 
 
 def main():
+    start = time.time()
     """Command line application to download youtube videos."""
     logger = set_logger(logfile=args.logfile,
                         verbosity=args.verbosity, quiet=args.quiet)
@@ -725,22 +739,28 @@ def main():
     elif args.file or args.playlist or args.file:
         downloads = get_url_list(args)
         for url in downloads:
+            start_url = time.time()
             logger.info("Trying to download URL = {url}".format(url=url))
             for i in range(1, args.retry+1):
                 yt = get_correct_yt(url)
                 logger.info("Title = {title}".format(title=yt.title))
-                get_captions(yt, args.caption)
+                get_captions(yt, True)
 
                 itags = get_target_itags(
                     yt=yt, quality=args.quality, mode=args.mode)
 
                 # download target youtube
                 for i, itag in enumerate(itags):
+                    start_itag = time.time()
                     filepath = download_youtube_by_itag(yt, itag)
                     if filepath:
                         logger.info(
                             "Successfully download to {filepath}".format(filepath=filepath))
 
+                    end_itag = time.time()
+                    duration = end_itag - start_itag
+                    logger.debug(
+                        ("URL processing finished, execution in [%s] seconds") % (duration))
                 # update items in ini file
                 else:
                     if args.file and (not args.listkeep):
@@ -753,10 +773,20 @@ def main():
             else:
                 logger.fatal(
                     "Download Youtube Video/Audio from URL = [{url}] FAILED".format(url=url))
+
+            end_url = time.time()
+            duration = end_url - start_url
+            logger.debug(
+                ("URL processing finished, execution in [%s] seconds") % (duration))
         # finish all downloads
         else:
             logger.info(
                 "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(downloads)))
+
+    end = time.time()
+    duration = end - start
+    logger.info(
+        ("Script Running Finished, Execution in [%s] Seconds") % (duration))
 
     return True
 
