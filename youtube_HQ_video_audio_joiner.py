@@ -178,13 +178,13 @@ def get_arguments():
     )
     parser.add_argument(
         "-lkp", "--listkeep", type=youtube_downloader.str2bool, nargs='?', const=False, help=(
-            "keep origional audio/video item on -f --file {file}"
+            "keep original audio/video item on -f --file {file}"
         )
     )
 
     parser.add_argument(
         "-o", "--out", action="store", type=str, help=(
-            "identify the destnation folder/filename to store the file"
+            "identify the destination folder/filename to store the file"
         )
     )
     parser.add_argument(
@@ -194,12 +194,12 @@ def get_arguments():
     )
     parser.add_argument(
         "-kp", "--keep", type=youtube_downloader.str2bool, nargs='?', const=False, help=(
-            "keep origional audio/video files"
+            "keep original audio/video files"
         )
     )
     parser.add_argument(
         "-j", "--join", type=youtube_downloader.str2bool, nargs='?', const=True, help=(
-            "keep origional audio/video files"
+            "keep original audio/video files"
         )
     )
     parser.add_argument(
