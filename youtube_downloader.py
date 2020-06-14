@@ -883,6 +883,71 @@ def download_youtube_by_itag(yt, itag):
     return filepath
 
 
+def ffmpeg_process(
+    youtube: YouTube, resolution: str, target: str = None
+) -> None:
+    """
+    Decides the correct video stream to download, then calls _ffmpeg_downloader.
+
+    :param YouTube youtube:
+        A valid YouTube object.
+    :param str resolution:
+        YouTube video resolution.
+    :param str target:
+        Target directory for download
+    """
+    youtube.register_on_progress_callback(on_progress)
+    target = target or os.getcwd()
+
+    if resolution == "best":
+        highest_quality_stream = (
+            youtube.streams.filter(progressive=False).order_by(
+                "resolution").last()
+        )
+        mp4_stream = (
+            youtube.streams.filter(progressive=False, subtype="mp4")
+            .order_by("resolution")
+            .last()
+        )
+        if highest_quality_stream.resolution == mp4_stream.resolution:
+            video_stream = mp4_stream
+        else:
+            video_stream = highest_quality_stream
+    else:
+        video_stream = youtube.streams.filter(
+            progressive=False, resolution=resolution, subtype="mp4"
+        ).first()
+        if not video_stream:
+            video_stream = youtube.streams.filter(
+                progressive=False, resolution=resolution
+            ).first()
+    if video_stream is None:
+        print(f"Could not find a stream with resolution: {resolution}")
+        print("Try one of these:")
+        display_streams(youtube)
+        sys.exit()
+
+    audio_stream = youtube.streams.get_audio_only(video_stream.subtype)
+    if not audio_stream:
+        audio_stream = youtube.streams.filter(
+            only_audio=True).order_by("abr").last()
+    if not audio_stream:
+        print("Could not find an audio only stream")
+        sys.exit()
+
+    video_path = download_youtube_by_itag(youtube, video_stream.itag)
+    audio_path = download_youtube_by_itag(youtube, audio_stream.itag)
+    final_path = os.path.join(
+        target, f"{video_stream.title}_HQ.{video_stream.subtype}"
+    )
+    subprocess.run(  # nosec
+        ["ffmpeg", "-i", video_path, "-i", audio_path,
+            "-codec", "copy", final_path, "-y", ]
+    )
+
+    return video_path, audio_path, final_path
+
+
 def main():
     start = time.time()
     """Command line application to download youtube videos."""
@@ -934,7 +999,11 @@ def main():
                         os.chmod(ffmpeg_binary, stat.S_IRWXU |
                                  stat.S_IRWXG | stat.S_IRWXO)
                         copyfile(ffmpeg_binary, "ffmpeg")
-                        cli.ffmpeg_process(yt, "best", args.target)
+                        video_path, audio_path, final_path = ffmpeg_process(
+                            yt, "best", args.target)
+                        if not args.filekeep:
+                            os.unlink(video_path)
+                            os.unlink(audio_path)
 
                     if args.file and (not args.listkeep):
                         update_item_in_file(args.file, item=url)
