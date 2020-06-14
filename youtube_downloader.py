@@ -30,6 +30,7 @@ import ntpath
 import contextlib
 import lzma
 import tarfile
+import stat
 
 from pytube import __version__
 from pytube import YouTube
@@ -281,9 +282,9 @@ def detect_platform():
     logger.info(platform.version())
     logger.info(arch)
 
-    #logger.info("Your system is %s %s" % (platform.system(), arch))
+    # logger.info("Your system is %s %s" % (platform.system(), arch))
     if platform.system().lower() == "windows":
-        logger.info("Your system is windows %s" % arch )
+        logger.info("Your system is windows %s" % arch)
     elif platform.system().lower() == "linux":
         logger.info("Your system is Linux %s" % arch)
         logger.info(platform.linux_distribution)
@@ -334,18 +335,18 @@ def download_ffmpeg(out=os.getcwd()):
         with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
             zip_ref.extractall(out)
             for file in zip_ref.filelist:
-                if file.filename.endswith("ffmpeg.exe") and (not file.is_dir()) and int(file.file_size) > 0:
+                if file.filename.endswith("ffmpeg") and (not file.is_dir()) and int(file.file_size) > 0:
                     ffmpeg_binary = file.filename
                     break
 
     else:
         ffmpeg_url = False
-        logger.error("Unspported system")
+        logger.error("Unsupported system")
         return False
 
     filesize = os.path.getsize(ffmpeg_binary)
-    print("ffmpeg location on [{path}], size = [{size}]".format(path=ffmpeg_binary, size=filesize))
-    logger.info("ffmpeg location on [{path}], size = [{size}]".format(path=ffmpeg_binary, size=filesize))
+    logger.info("ffmpeg location on [{path}], size = [{size}]".format(
+        path=ffmpeg_binary, size=filesize))
 
     return ffmpeg_binary
 
@@ -358,7 +359,8 @@ def symlink(source, link_name):
         try:
             import ctypes
             csl = ctypes.windll.kernel32.CreateSymbolicLinkW
-            csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+            csl.argtypes = (ctypes.c_wchar_p,
+                            ctypes.c_wchar_p, ctypes.c_uint32)
             csl.restype = ctypes.c_ubyte
             flags = 1 if os.path.isdir(source) else 0
             if csl(link_name, source, flags) == 0:
@@ -368,11 +370,20 @@ def symlink(source, link_name):
                 import win32file
                 win32file.CreateSymbolicLink(fileSrc, fileTarget, 1)
             except:
-                print('unable to create symbolic link from [{src}] to [{dst}]'.format(src=source, dst=link_name))
+                print('unable to create symbolic link from [{src}] to [{dst}]'.format(
+                    src=source, dst=link_name))
 
 
-def copyfile(source, destnation, skip=True):
-    return True if skip == True and os.path.isfile(source) and os.path.isfile(destnation) and (os.path.getsize(source) == os.path.getsize(destnation)) else shutil.copyfile(source, destnation)
+def copyfile(source, destination, skip=True):
+    if skip == True and os.path.isfile(source) and os.path.isfile(destination) and (os.path.getsize(source) == os.path.getsize(destination)):
+        pass
+    else:
+        shutil.copyfile(source, destination)
+
+    st = os.stat(source)
+    shutil.copymode(source, destination)
+    os.chown(destination, st[stat.ST_UID], st[stat.ST_GID])
+    # return True if skip == True and os.path.isfile(source) and os.path.isfile(destination) and (os.path.getsize(source) == os.path.getsize(destination)) else shutil.copyfile(source, destination)
 
 
 def median(lst):
@@ -811,15 +822,15 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     logger.debug(rank)
 
     # block below temporary because the performance is the same same comparing above one line sentence.
-    #rank = dict()
+    # rank = dict()
     # for itag in streams.itag_index:
     #    itag_filesize = streams.itag_index[itag].filesize
     #    if isinstance(itag_filesize, int):
     #        rank[itag] = int(itag_filesize)
     #    end_stream = time.time()
     #    logger.debug("take = [{time}] secs".format(time=end_stream-start))
-    #end_rank = time.time()
-    #logger.debug("generate rank take = [{time}] secs".format(time=end_rank-start))
+    # end_rank = time.time()
+    # logger.debug("generate rank take = [{time}] secs".format(time=end_rank-start))
     # logger.debug(rank)
 
     sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
@@ -920,6 +931,8 @@ def main():
                     # join video/audio if required
                     if args.join:
                         ffmpeg_binary = download_ffmpeg()
+                        os.chmod(ffmpeg_binary, stat.S_IRWXU |
+                                 stat.S_IRWXG | stat.S_IRWXO)
                         copyfile(ffmpeg_binary, "ffmpeg")
                         cli.ffmpeg_process(yt, "best", args.target)
 
@@ -1023,5 +1036,5 @@ if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
     # unitest()
     main()
-    #download_ffmpeg()
+    # download_ffmpeg()
     # sys.exit(main())
