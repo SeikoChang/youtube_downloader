@@ -996,7 +996,7 @@ def main():
                         ffmpeg_binary = download_ffmpeg()
                         os.chmod(ffmpeg_binary, stat.S_IRWXU |
                                  stat.S_IRWXG | stat.S_IRWXO)
-                        copyfile(ffmpeg_binary, "ffmpeg")
+                        #copyfile(ffmpeg_binary, "ffmpeg")
                         video_path, audio_path, final_path = ffmpeg_process(
                             yt, "best", args.target, ffmpeg_binary)
                         if not args.filekeep:
