@@ -23,12 +23,19 @@ import shutil
 import ntpath
 import re
 import operator
+import platform
+from download_file import download_file as download_file
+import zipfile
+import ntpath
+import contextlib
+import lzma
+import tarfile
 
 from pytube import __version__
 from pytube import YouTube
 from pytube import Playlist
 from pytube.helpers import regex_search
-#from pytube import cli
+from pytube import cli
 
 PY3K = sys.version_info >= (3, 0)
 if PY3K:
@@ -68,7 +75,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-lkp", "--listkeep", type=str2bool, nargs='?', const=False, help=(
+        "-lkp", "--listkeep", type=str2bool, nargs='?', const=False, default=False, help=(
             "identify if keep item in -f --file {file} after successfully download file"
         )
     )
@@ -104,7 +111,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-rp", "--replace", type=str2bool, nargs='?', const=True, help=(
+        "-rp", "--replace", type=str2bool, nargs='?', const=True, default=True, help=(
             "identify if replace the existed file with the same filename \
             or download new file with prefix file name, \
             this only be taken when skip = False"
@@ -112,7 +119,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-sp", "--skip", type=str2bool, nargs='?', const=True, help=(
+        "-sp", "--skip", type=str2bool, nargs='?', const=True, default=True, help=(
             "identify if skip the existed file"
         )
     )
@@ -136,7 +143,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-q", "--quiet", type=str2bool, nargs='?', const=True, help=(
+        "-q", "--quiet", type=str2bool, nargs='?', const=True, default=True, help=(
             "identify if enable the silent mode"
         )
     )
@@ -160,7 +167,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-cap", "--caption", action="store_true", help=(
+        "-cap", "--caption", action="store_false", help=(
             "download all available caption for all languages if available \
              or download specific language caption only"
         )
@@ -179,10 +186,23 @@ def get_arguments():
     )
 
     parser.add_argument(
+        "-ff",
+        "--ffmpeg",
+        action="store",
+        type=str,
+        default=os.getcwd(),
+        help=(
+            "The output directory for the downloaded ffmpeg binary. "
+            "Default is current working directory"
+        ),
+    )
+
+    parser.add_argument(
         "-j",
         "--join",
         type=str2bool,
         nargs='?',
+        default=True,
         const=True,
         help=(
             "join original best audio/video files"
@@ -194,16 +214,13 @@ def get_arguments():
         "--filekeep",
         type=str2bool,
         nargs='?',
+        default=True,
         const=True,
         help=(
             "keep original audio/video files after joined"
         )
     )
 
-    parser.set_defaults(listkeep=False)
-    parser.set_defaults(replace=True)
-    parser.set_defaults(skip=True)
-    parser.set_defaults(quiet=False)
     args = parser.parse_args(sys.argv[1:])
     print(args)
     if not (args.url or args.playlist or os.path.exists(args.file)):
@@ -254,6 +271,108 @@ def loglevel_converter(loglevel):
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % loglevel)
     return numeric_level
+
+
+def detect_platform():
+    is_64bit = platform.machine().endswith('64')
+    arch = '64bit' if is_64bit else '32bit'
+    logger.info(platform.system())
+    logger.info(platform.release())
+    logger.info(platform.version())
+    logger.info(arch)
+
+    #logger.info("Your system is %s %s" % (platform.system(), arch))
+    if platform.system().lower() == "windows":
+        logger.info("Your system is windows %s" % arch )
+    elif platform.system().lower() == "linux":
+        logger.info("Your system is Linux %s" % arch)
+        logger.info(platform.linux_distribution)
+    elif platform.system().lower() == "darwin":
+        logger.info("Your system is MacOS %s" % arch)
+        logger.info(platform.mac_ver)
+    else:
+        logger.info("Unidentified system")
+
+    return platform.system(), arch
+
+
+def download_ffmpeg(out=os.getcwd()):
+    platform, arch = detect_platform()
+    if platform.lower() == "windows":
+        if arch.lower() == '32bit':
+            ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-latest-win32-static.zip"
+        elif arch.lower() == '64bit':
+            ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip"
+        ffmpeg = download_file(url=ffmpeg_url, out=out)
+        logger.info("%s downloaded" % ffmpeg)
+        with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
+            zip_ref.extractall(out)
+            for file in zip_ref.filelist:
+                if file.filename.endswith("ffmpeg.exe") and (not file.is_dir()) and int(file.file_size) > 0:
+                    ffmpeg_binary = file.filename
+                    break
+
+    elif platform.lower() == "linux":
+        if arch.lower() == '32bit':
+            ffmpeg_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        elif arch.lower() == '64bit':
+            ffmpeg_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        ffmpeg = download_file(url=ffmpeg_url, out=out)
+        logger.info("%s downloaded" % ffmpeg)
+        with contextlib.closing(lzma.LZMAFile(ffmpeg)) as xz:
+            with tarfile.open(fileobj=xz) as f:
+                f.extractall(out)
+                for member in f.members:
+                    if member.name.endswith('ffmpeg') and int(member.size) > 0 and int(member.mode) == 493:
+                        ffmpeg_binary = member.name
+                        break
+
+    elif platform.lower() == "darwin":
+        ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/macos64/static/ffmpeg-latest-macos64-static.zip"
+        ffmpeg = download_file(url=ffmpeg_url, out=out)
+        logger.info("%s downloaded" % ffmpeg)
+        with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
+            zip_ref.extractall(out)
+            for file in zip_ref.filelist:
+                if file.filename.endswith("ffmpeg.exe") and (not file.is_dir()) and int(file.file_size) > 0:
+                    ffmpeg_binary = file.filename
+                    break
+
+    else:
+        ffmpeg_url = False
+        logger.error("Unspported system")
+        return False
+
+    filesize = os.path.getsize(ffmpeg_binary)
+    print("ffmpeg location on [{path}], size = [{size}]".format(path=ffmpeg_binary, size=filesize))
+    logger.info("ffmpeg location on [{path}], size = [{size}]".format(path=ffmpeg_binary, size=filesize))
+
+    return ffmpeg_binary
+
+
+def symlink(source, link_name):
+    os_symlink = getattr(os, "symlink", None)
+    try:
+        os_symlink(source, link_name)
+    except:
+        try:
+            import ctypes
+            csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+            csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+            csl.restype = ctypes.c_ubyte
+            flags = 1 if os.path.isdir(source) else 0
+            if csl(link_name, source, flags) == 0:
+                raise ctypes.WinError()
+        except:
+            try:
+                import win32file
+                win32file.CreateSymbolicLink(fileSrc, fileTarget, 1)
+            except:
+                print('unable to create symbolic link from [{src}] to [{dst}]'.format(src=source, dst=link_name))
+
+
+def copyfile(source, destnation, skip=True):
+    return True if skip == True and os.path.isfile(source) and os.path.isfile(destnation) and (os.path.getsize(source) == os.path.getsize(destnation)) else shutil.copyfile(source, destnation)
 
 
 def median(lst):
@@ -500,7 +619,7 @@ def get_correct_yt(url):
     return yt
 
 
-def download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry=10):
+def _download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry=10):
     """Start downloading a YouTube video.
     :param str url:
         A valid YouTube watch URL.
@@ -685,7 +804,7 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     logger.debug("take = [{time}] secs".format(time=end_streams-start))
 
     rank = {
-        itag: streams.itag_index[itag].filesize for itag in streams.itag_index if isinstance(streams.itag_index[itag].filesize, int)}
+        stream.itag: stream.filesize for stream in streams if isinstance(stream.filesize, int)}
     end_rank = time.time()
     logger.debug("generate rank take = [{time}] secs".format(
         time=end_rank-start))
@@ -798,12 +917,14 @@ def main():
 
                 # update items in ini file
                 else:
+                    # join video/audio if required
+                    if args.join:
+                        ffmpeg_binary = download_ffmpeg()
+                        copyfile(ffmpeg_binary, "ffmpeg")
+                        cli.ffmpeg_process(yt, "best", args.target)
+
                     if args.file and (not args.listkeep):
                         update_item_in_file(args.file, item=url)
-
-                # join video/audio if required
-                if args.join:
-                    cli.ffmpeg_process(youtube=yt, resolution='best', target=args.target)
 
                 # break retry level here
                 break
@@ -902,4 +1023,5 @@ if __name__ == "__main__":  # Only run if this file is called directly
     args = get_arguments()
     # unitest()
     main()
+    #download_ffmpeg()
     # sys.exit(main())
