@@ -883,9 +883,7 @@ def download_youtube_by_itag(yt, itag):
     return filepath
 
 
-def ffmpeg_process(
-    youtube: YouTube, resolution: str, target: str = None
-) -> None:
+def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg: str = "ffmpeg") -> None:
     """
     Decides the correct video stream to download, then calls _ffmpeg_downloader.
 
@@ -941,7 +939,7 @@ def ffmpeg_process(
         target, f"{video_stream.title}_HQ.{video_stream.subtype}"
     )
     subprocess.run(  # nosec
-        ["ffmpeg", "-i", video_path, "-i", audio_path,
+        [ffmpeg, "-i", video_path, "-i", audio_path,
             "-codec", "copy", final_path, "-y", ]
     )
 
@@ -1000,7 +998,7 @@ def main():
                                  stat.S_IRWXG | stat.S_IRWXO)
                         copyfile(ffmpeg_binary, "ffmpeg")
                         video_path, audio_path, final_path = ffmpeg_process(
-                            yt, "best", args.target)
+                            yt, "best", args.target, ffmpeg_binary)
                         if not args.filekeep:
                             os.unlink(video_path)
                             os.unlink(audio_path)
