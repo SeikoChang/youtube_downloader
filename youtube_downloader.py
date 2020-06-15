@@ -970,6 +970,8 @@ def main():
             logger.info("Trying to download URL = {url}".format(url=url))
             for i in range(1, args.retry+1):
                 yt = get_correct_yt(url)
+                if not yt:
+                    continue
                 logger.info("Title = {title}".format(title=yt.title))
                 get_captions(yt, args.caption)
 
