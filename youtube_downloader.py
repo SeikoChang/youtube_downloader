@@ -755,7 +755,7 @@ def get_captions(yt, lang):
 
 def query_captions_codes(yt):
     codes = list()
-    captions = yt.captions.all()
+    captions = yt.captions
     logger.debug('captions = %s' % captions)
     for caption in captions:
         logger.debug('caption = %s' % caption)
@@ -801,11 +801,11 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     start = time.time()
     if mode.upper() == 'VIDEO_AUDIO':
         streams = yt.streams.filter(
-            progressive=True).order_by('itag').all()
+            progressive=True).order_by('itag')
     elif mode.upper() == 'VIDEO':
-        streams = yt.streams.filter(only_video=True).order_by('itag').all()
+        streams = yt.streams.filter(only_video=True).order_by('itag')
     elif mode.upper() == 'AUDIO':
-        streams = yt.streams.filter(only_audio=True).order_by('itag').all()
+        streams = yt.streams.filter(only_audio=True).order_by('itag')
     elif mode.upper() == 'ALL':
         streams = yt.streams
     else:
