@@ -745,10 +745,13 @@ def get_captions(yt, lang):
             if (lang == True) or (code.lower() == lang.lower()):
                 logger.info(
                     'downloading captions for language code = [%s]' % code)
+                try:
                 filepath = yt.captions[code].download(
                     title=filename, srt=True, output_path=args.target)
                 logger.info(
                     'captions downloaded = [%s]' % filepath)
+                except:
+                    logger.error('unable to download caption code = [{code}'.format(code=code))
 
     return True
 
