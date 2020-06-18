@@ -843,13 +843,14 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     elif quality.upper() == 'LOW':
         itags = [sorted_rank[0][0]]
     elif quality.upper() == 'ALL':
-        itags = sorted_rank.keys()
+        itags = [itag[0] for itag in sorted_rank]
     else:
         return itags
 
     end = time.time()
     logger.debug(
         "get_target_itags() take = [{time}] secs".format(time=end-start))
+
     return itags
 
 
@@ -881,7 +882,7 @@ def download_youtube_by_itag(yt, itag):
         filepath = yt.streams.get_by_itag(itag).download(
             output_path=args.target, filename=filename)
     except:
-        logger.error("Unable to download YT, url = [{url}]".format(url=url))
+        logger.error("Unable to download YT, url = [{url}], itag = [{itag}".format(url=url, itag=itag))
     return filepath
 
 
@@ -981,6 +982,8 @@ def main():
 
                 itags = get_target_itags(
                     yt=yt, quality=args.quality, mode=args.mode)
+
+                logger.debug("itag list = {itags}".format(itags=itags))
 
                 # download target youtube
                 for i, itag in enumerate(itags):
