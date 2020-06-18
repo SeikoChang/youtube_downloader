@@ -864,22 +864,24 @@ def update_item_in_file(file, item):
 
 def download_youtube_by_itag(yt, itag):
     filepath = None
-    url = yt.watch_url
-    stream = yt.streams.get_by_itag(itag)
-    title = stream.title
-    resolution = stream.resolution
-    video_codec = stream.video_codec
-    abr = stream.abr
-    audio_codec = stream.audio_codec
-    fps = stream.fps
-    bitrate = stream.bitrate
-    filesize = stream.filesize
-    filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
-        title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
+    try:
+        url = yt.watch_url
+        stream = yt.streams.get_by_itag(itag)
+        title = stream.title
+        resolution = stream.resolution
+        video_codec = stream.video_codec
+        abr = stream.abr
+        audio_codec = stream.audio_codec
+        fps = stream.fps
+        bitrate = stream.bitrate
+        filesize = stream.filesize
+        filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
+            title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
 
-    filepath = yt.streams.get_by_itag(itag).download(
-        output_path=args.target, filename=filename)
-
+        filepath = yt.streams.get_by_itag(itag).download(
+            output_path=args.target, filename=filename)
+    except:
+        logger.error("Unable to download YT, url = [{url}]".format(url=url))
     return filepath
 
 
@@ -933,15 +935,17 @@ def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg
         print("Could not find an audio only stream")
         sys.exit()
 
+    video_path = audio_path = final_path = None
     video_path = download_youtube_by_itag(youtube, video_stream.itag)
     audio_path = download_youtube_by_itag(youtube, audio_stream.itag)
-    final_path = os.path.join(
-        target, f"{video_stream.title}_HQ.{video_stream.subtype}"
-    )
-    subprocess.run(  # nosec
-        [ffmpeg, "-i", video_path, "-i", audio_path,
-            "-codec", "copy", final_path, "-y", ]
-    )
+    if all([video_path, audio_path]):
+        final_path = os.path.join(
+            target, f"{video_stream.title}_HQ.{video_stream.subtype}"
+        )
+        subprocess.run(  # nosec
+            [ffmpeg, "-i", video_path, "-i", audio_path,
+                "-codec", "copy", final_path, "-y", ]
+        )
 
     return video_path, audio_path, final_path
 
