@@ -144,7 +144,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-q", "--quiet", type=str2bool, nargs='?', const=True, default=True, help=(
+        "-q", "--quiet", type=str2bool, nargs='?', const=False, default=False, help=(
             "identify if enable the silent mode"
         )
     )
@@ -156,7 +156,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-qt", "--quality", default='NORMAL', const='NORMAL', nargs='?', type=str, choices=['HIGH', 'NORMAL', 'LOW', 'ALL'], help=(
+        "-qt", "--quality", default='HIGH', const='HIGH', nargs='?', type=str, choices=['HIGH', 'NORMAL', 'LOW', 'ALL'], help=(
             "choose the quality of video to download"
         )
     )
@@ -203,8 +203,8 @@ def get_arguments():
         "--join",
         type=str2bool,
         nargs='?',
-        default=True,
-        const=True,
+        default=False,
+        const=False,
         help=(
             "join original best audio/video files"
         )
@@ -626,6 +626,9 @@ def get_correct_yt(url):
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
             logger.error('Due to the reason = [%s]' % message)
+    else:
+        logger.error(
+            "Unable to get correct YouTube object for {retry} times, skip download this time".format(retry=args.retry))
 
     return yt
 
@@ -743,15 +746,15 @@ def get_captions(yt, lang):
         codes = query_captions_codes(yt)
         for code in codes:
             if (lang == True) or (code.lower() == lang.lower()):
-                logger.info(
-                    'downloading captions for language code = [%s]' % code)
+                #logger.info('downloading captions for language code = [%s]' % code)
                 try:
-                filepath = yt.captions[code].download(
-                    title=filename, srt=True, output_path=args.target)
-                logger.info(
-                    'captions downloaded = [%s]' % filepath)
+                    filepath = yt.captions[code].download(
+                        title=filename, srt=True, output_path=args.target)
+                    logger.info(
+                        'captions language code = [{code}] downloaded [{filepath}]'.format(code=code, filepath=filepath))
                 except:
-                    logger.error('unable to download caption code = [{code}'.format(code=code))
+                    logger.error(
+                        'unable to download caption code = [{code}'.format(code=code))
 
     return True
 
@@ -761,9 +764,9 @@ def query_captions_codes(yt):
     captions = yt.captions
     logger.debug('captions = %s' % captions)
     for caption in captions:
-        logger.debug('caption = %s' % caption)
+        #logger.debug('caption = %s' % caption)
         code = caption.code
-        logger.debug('code = [%s]' % code)
+        #logger.debug('code = [%s]' % code)
         codes.append(code)
 
     return codes
@@ -857,7 +860,7 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     return itags
 
 
-def update_item_in_file(file, item):
+def remove_item_in_file(file, item):
     with open(file, "r") as f:
         lines = f.readlines()
     with open(file, "w") as f:
@@ -881,11 +884,15 @@ def download_youtube_by_itag(yt, itag):
         filesize = stream.filesize
         filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
             title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
+        filename = to_unicode(filename)
+        logger.info("Filename = {filename}".format(filename=filename))
 
         filepath = yt.streams.get_by_itag(itag).download(
             output_path=args.target, filename=filename)
     except:
-        logger.error("Unable to download YT, url = [{url}], itag = [{itag}".format(url=url, itag=itag))
+        logger.error("Unable to download YT, url = [{url}], itag = [{itag}".format(
+            url=url, itag=itag))
+
     return filepath
 
 
@@ -980,7 +987,16 @@ def main():
                 yt = get_correct_yt(url)
                 if not yt:
                     continue
+
                 logger.info("Title = {title}".format(title=yt.title))
+                logger.info("Description = {description}".format(
+                    description=yt.description))
+                logger.info("Views = {views}".format(views=yt.views))
+                logger.info("Rating = {rating}".format(rating=yt.rating))
+                logger.info("Length = {length}".format(length=yt.length))
+                logger.info("Thumbnail_url = {thumbnail_url}".format(
+                    thumbnail_url=yt.thumbnail_url))
+
                 get_captions(yt, args.caption)
 
                 itags = get_target_itags(
@@ -991,6 +1007,10 @@ def main():
                 # download target youtube
                 for i, itag in enumerate(itags):
                     start_itag = time.time()
+                    stream = yt.streams.get_by_itag(itag)
+                    logger.info("Filesize = {filesize}".format(
+                        filesize=stream.filesize))
+
                     filepath = download_youtube_by_itag(yt, itag)
                     if filepath:
                         logger.info(
@@ -999,7 +1019,12 @@ def main():
                     end_itag = time.time()
                     duration = end_itag - start_itag
                     logger.debug(
-                        ("URL processing finished, execution in [%s] seconds") % (duration))
+                        "URL = [{url}] processing finished".format(url=url))
+                    logger.debug(
+                        "Execution in [{duration}] seconds with filesize [{filesize}]".format(duration=duration, filesize=stream.filesize))
+
+                    logger.debug(
+                        "Average speed = [{avg} Mbps]".format(avg=stream.filesize/8/1024/duration))
 
                 # update items in ini file
                 else:
@@ -1016,7 +1041,7 @@ def main():
                             os.unlink(audio_path)
 
                     if args.file and (not args.listkeep):
-                        update_item_in_file(args.file, item=url)
+                        remove_item_in_file(args.file, item=url)
 
                 # break retry level here
                 break
