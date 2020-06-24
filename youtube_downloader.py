@@ -32,11 +32,14 @@ import lzma
 import tarfile
 import stat
 
+from urllib.parse import parse_qs
+
 from pytube import __version__
-from pytube import YouTube
+from pytube import request, YouTube
 from pytube import Playlist
 from pytube.helpers import regex_search
 from pytube import cli
+from pytube.helpers import cache, deprecated, install_proxy, uniqueify
 
 PY3K = sys.version_info >= (3, 0)
 if PY3K:
@@ -60,14 +63,20 @@ def get_arguments():
 
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('url', nargs='?', help=(
-        'The YouTube /watch url'
-    )
+        'The YouTube /watch url, for example : "https://www.youtube.com/watch?v=yWebbSWPG4g"'
+        )
     )
 
     parser.add_argument('playlist', nargs='?', help=(
-        'The YouTube playlist url, for example : "https://www.youtube.com/playlist?list={self.playlist_id}"'
+        'The YouTube playlist url, for example : "https://www.youtube.com/playlist?list=PLohb4k71XnPaQRTvKW4Uii1oq-JPGpwWF"'
+        )
     )
+
+    parser.add_argument('channel', nargs='?', help=(
+        'The YouTube playlist url, for example : "https://www.youtube.com/channel/UCFdTiwvDjyc62DBWrlYDtlQ"'
+        )
     )
+
 
     parser.add_argument(
         "-f", "--file", action="store", type=str, default=defaultIni, help=(
@@ -203,8 +212,8 @@ def get_arguments():
         "--join",
         type=str2bool,
         nargs='?',
-        default=False,
-        const=False,
+        default=True,
+        const=True,
         help=(
             "join original best audio/video files"
         )
@@ -224,7 +233,7 @@ def get_arguments():
 
     args = parser.parse_args(sys.argv[1:])
     print(args)
-    if not (args.url or args.playlist or os.path.exists(args.file)):
+    if not any([args.url, args.playlist, args.channel, os.path.exists(args.file)]):
         parser.print_help()
         open(defaultIni, mode='a+')
 
@@ -460,19 +469,36 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-def is_watchUrl(string):
-    rtv = False
+def is_channel(string):
+    # example, https://www.youtube.com/channel/UCFdTiwvDjyc62DBWrlYDtlQs
     try:
-        regex_search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", string, group=1)
-        rtv = True
+        regex_search(r"(channel/)([0-9A-Za-z_-]{25}).*", string, group=1)
+        return True
     except:
-        rtv = False
+        return False
 
-    return rtv
+    #return (f"channel" in string)
 
 
 def is_playList(string):
-    return (f"playlist?list=" in string)
+    #return (f"playlist?list=" in string)
+    # example, https://www.youtube.com/playlist?list=PL-g0fdC5RMboYEyt6QS2iLb_1m7QcgfHk
+    try:
+        regex_search(r"(playlist\?list=)([0-9A-Za-z_-]{34}).*", string, group=1)
+        return True
+    except:
+        return False
+
+
+def is_watchUrl(string):
+    #- :samp:`https://youtube.com/watch?v={video_id}`
+    #- :samp:`https://youtube.com/embed/{video_id}`
+    #- :samp:`https://youtu.be/{video_id}`
+    try:
+        regex_search(r"(?:v=|/)([0-9A-Za-z_-]{11}).*", string, group=1)
+        return True
+    except:
+        return False
 
 
 def build_playback_report(url):
@@ -785,12 +811,18 @@ def get_url_list(args):
     elif args.file:
         with open(args.file, "r") as fp:
             for line in fp:
-                if is_watchUrl(line):
-                    downloads.append(line)
+                if is_channel(line):
+                    print("%s is_channel" % line)
+                    videos = get_video_from_channel(line)
+                    downloads.append(videos)
                 elif is_playList(line):
+                    print("%s is_playList" % line)
                     playlist = Playlist(line)
                     for video in playlist:
                         downloads.append(video + '\n')
+                elif is_watchUrl(line):
+                    print("%s is_watchUrl" % line)
+                    downloads.append(line)
 
         logger.debug('All required download URLs = %s' % downloads)
         with open(args.file, "w") as f:
@@ -960,6 +992,22 @@ def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg
 
     return video_path, audio_path, final_path
 
+
+def get_video_from_channel(url):
+    videos = list()
+
+    try:
+        channel_id: str = regex_search(r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
+    except IndexError:  # assume that url is just the id
+        channel_id = url
+
+    channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
+    html = request.get(channel_url)
+
+    video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
+    videos = uniqueify(video_regex.findall(html))
+
+    return videos
 
 def main():
     start = time.time()
