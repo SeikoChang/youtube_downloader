@@ -64,19 +64,18 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('url', nargs='?', help=(
         'The YouTube /watch url, for example : "https://www.youtube.com/watch?v=yWebbSWPG4g"'
-        )
+    )
     )
 
     parser.add_argument('playlist', nargs='?', help=(
         'The YouTube playlist url, for example : "https://www.youtube.com/playlist?list=PLohb4k71XnPaQRTvKW4Uii1oq-JPGpwWF"'
-        )
+    )
     )
 
     parser.add_argument('channel', nargs='?', help=(
         'The YouTube playlist url, for example : "https://www.youtube.com/channel/UCFdTiwvDjyc62DBWrlYDtlQ"'
-        )
     )
-
+    )
 
     parser.add_argument(
         "-f", "--file", action="store", type=str, default=defaultIni, help=(
@@ -171,7 +170,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-m", "--mode", default='VIDEO_AUDIO', const='VIDEO_AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
+        "-m", "--mode", default='AUDIO', const='AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
             "choose only video/audio or video and audio together"
         )
     )
@@ -212,8 +211,8 @@ def get_arguments():
         "--join",
         type=str2bool,
         nargs='?',
-        default=True,
-        const=True,
+        default=False,
+        const=False,
         help=(
             "join original best audio/video files"
         )
@@ -477,23 +476,24 @@ def is_channel(string):
     except:
         return False
 
-    #return (f"channel" in string)
+    # return (f"channel" in string)
 
 
 def is_playList(string):
-    #return (f"playlist?list=" in string)
+    # return (f"playlist?list=" in string)
     # example, https://www.youtube.com/playlist?list=PL-g0fdC5RMboYEyt6QS2iLb_1m7QcgfHk
     try:
-        regex_search(r"(playlist\?list=)([0-9A-Za-z_-]{34}).*", string, group=1)
+        regex_search(
+            r"(playlist\?list=)([0-9A-Za-z_-]{34}).*", string, group=1)
         return True
     except:
         return False
 
 
 def is_watchUrl(string):
-    #- :samp:`https://youtube.com/watch?v={video_id}`
-    #- :samp:`https://youtube.com/embed/{video_id}`
-    #- :samp:`https://youtu.be/{video_id}`
+    # - :samp:`https://youtube.com/watch?v={video_id}`
+    # - :samp:`https://youtube.com/embed/{video_id}`
+    # - :samp:`https://youtu.be/{video_id}`
     try:
         regex_search(r"(?:v=|/)([0-9A-Za-z_-]{11}).*", string, group=1)
         return True
@@ -812,16 +812,16 @@ def get_url_list(args):
         with open(args.file, "r") as fp:
             for line in fp:
                 if is_channel(line):
-                    print("%s is_channel" % line)
+                    logger.debug("[%s] is_channel" % line)
                     videos = get_video_from_channel(line)
                     downloads.append(videos)
                 elif is_playList(line):
-                    print("%s is_playList" % line)
+                    logger.debug("[%s] is_playList" % line)
                     playlist = Playlist(line)
                     for video in playlist:
                         downloads.append(video + '\n')
                 elif is_watchUrl(line):
-                    print("%s is_watchUrl" % line)
+                    logger.debug("[%s] is_watchUrl" % line)
                     downloads.append(line)
 
         logger.debug('All required download URLs = %s' % downloads)
@@ -997,7 +997,8 @@ def get_video_from_channel(url):
     videos = list()
 
     try:
-        channel_id: str = regex_search(r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
+        channel_id: str = regex_search(
+            r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
     except IndexError:  # assume that url is just the id
         channel_id = url
 
@@ -1008,6 +1009,7 @@ def get_video_from_channel(url):
     videos = uniqueify(video_regex.findall(html))
 
     return videos
+
 
 def main():
     start = time.time()
