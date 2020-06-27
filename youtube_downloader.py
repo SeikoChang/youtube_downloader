@@ -901,7 +901,7 @@ def remove_item_in_file(file, item):
                 f.write(line)
 
 
-def download_youtube_by_itag(yt, itag):
+def download_youtube_by_itag(yt, itag, target=args.target):
     filepath = None
     try:
         url = yt.watch_url
@@ -917,10 +917,10 @@ def download_youtube_by_itag(yt, itag):
         filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
             title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
         filename = to_unicode(filename)
-        logger.info("Filename = {filename}".format(filename=filename))
+        logger.debug("Filename = {filename}".format(filename=filename))
 
         filepath = yt.streams.get_by_itag(itag).download(
-            output_path=args.target, filename=filename)
+            output_path=target, filename=filename)
     except:
         logger.error("Unable to download YT, url = [{url}], itag = [{itag}".format(
             url=url, itag=itag))
