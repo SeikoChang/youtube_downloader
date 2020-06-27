@@ -40,6 +40,7 @@ from pytube import Playlist
 from pytube.helpers import regex_search
 from pytube import cli
 from pytube.helpers import cache, deprecated, install_proxy, uniqueify
+from pytube.helpers import safe_filename
 
 PY3K = sys.version_info >= (3, 0)
 if PY3K:
@@ -768,7 +769,7 @@ def _download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retr
 
 def get_captions(yt, lang):
     if lang:
-        filename = to_unicode(yt.streams.first().default_filename)
+        filename = to_unicode(safe_filename(yt.title))
         codes = query_captions_codes(yt)
         for code in codes:
             if (lang == True) or (code.lower() == lang.lower()):
@@ -916,7 +917,7 @@ def download_youtube_by_itag(yt, itag, target=args.target):
         filesize = stream.filesize
         filename = '{title}_{video}_{video_codec}_{audio}_{audio_codec}_{fps}_{bitrate}_{filesize}'.format(
             title=title, video=resolution, video_codec=video_codec, audio=abr, audio_codec=audio_codec, fps=fps, bitrate=bitrate, filesize=filesize)
-        filename = to_unicode(filename)
+        filename = to_unicode(safe_filename(filename))
         logger.debug("Filename = {filename}".format(filename=filename))
 
         filepath = yt.streams.get_by_itag(itag).download(
