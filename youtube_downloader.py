@@ -902,7 +902,7 @@ def remove_item_in_file(file, item):
                 f.write(line)
 
 
-def download_youtube_by_itag(yt, itag, target=args.target):
+def download_youtube_by_itag(yt, itag, target=os.getcwd()):
     filepath = None
     try:
         url = yt.watch_url
@@ -980,8 +980,10 @@ def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg
         sys.exit()
 
     video_path = audio_path = final_path = None
-    video_path = download_youtube_by_itag(youtube, video_stream.itag)
-    audio_path = download_youtube_by_itag(youtube, audio_stream.itag)
+    video_path = download_youtube_by_itag(
+        youtube, video_stream.itag, args.target)
+    audio_path = download_youtube_by_itag(
+        youtube, audio_stream.itag, args.target)
     if all([video_path, audio_path]):
         final_path = os.path.join(
             target, f"{video_stream.title}_HQ.{video_stream.subtype}"
@@ -1012,6 +1014,89 @@ def get_video_from_channel(url):
     return videos
 
 
+def download_youtube_object(downloads):
+    for url in downloads:
+        start_url = time.time()
+        logger.info("Trying to download URL = {url}".format(url=url))
+        for _ in range(1, args.retry+1):
+            yt = get_correct_yt(url)
+            if not yt:
+                continue
+
+            logger.info("Title = {title}".format(title=yt.title))
+            logger.info("Description = {description}".format(
+                description=yt.description))
+            logger.info("Views = {views}".format(views=yt.views))
+            logger.info("Rating = {rating}".format(rating=yt.rating))
+            logger.info("Length = {length}".format(length=yt.length))
+            logger.info("Thumbnail_url = {thumbnail_url}".format(
+                thumbnail_url=yt.thumbnail_url))
+
+            get_captions(yt, args.caption)
+
+            itags = get_target_itags(
+                yt=yt, quality=args.quality, mode=args.mode)
+
+            logger.debug("itag list = {itags}".format(itags=itags))
+
+            # download target youtube
+            for _, itag in enumerate(itags):
+                start_itag = time.time()
+                stream = yt.streams.get_by_itag(itag)
+                logger.info("Filesize = {filesize}".format(
+                    filesize=stream.filesize))
+
+                filepath = download_youtube_by_itag(yt, itag, args.target)
+                if filepath:
+                    logger.info(
+                        "Successfully download to {filepath}".format(filepath=filepath))
+
+                end_itag = time.time()
+                duration = end_itag - start_itag
+                logger.debug(
+                    "URL = [{url}] processing finished".format(url=url))
+                logger.debug(
+                    "Execution in [{duration}] seconds with filesize [{filesize}]".format(duration=duration, filesize=stream.filesize))
+
+                logger.debug(
+                    "Average speed = [{avg} Mbps]".format(avg=stream.filesize/8/1024/duration))
+
+            # update items in ini file
+            else:
+                # join video/audio if required
+                if args.join:
+                    ffmpeg_binary = download_ffmpeg()
+                    os.chmod(ffmpeg_binary, stat.S_IRWXU |
+                             stat.S_IRWXG | stat.S_IRWXO)
+                    #copyfile(ffmpeg_binary, "ffmpeg")
+                    video_path, audio_path, final_path = ffmpeg_process(
+                        yt, "best", args.target, ffmpeg_binary)
+                    if not args.filekeep:
+                        os.unlink(video_path)
+                        os.unlink(audio_path)
+
+                if args.file and (not args.listkeep):
+                    remove_item_in_file(args.file, item=url)
+
+            # break retry level here
+            break
+
+        # failed after retry multiple times
+        else:
+            logger.fatal(
+                "Download Youtube Video/Audio from URL = [{url}] FAILED".format(url=url))
+
+        end_url = time.time()
+        duration = end_url - start_url
+        logger.debug(
+            ("URL processing finished, execution in [%s] seconds") % (duration))
+
+    # finish all downloads
+    else:
+        logger.info(
+            "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(downloads)))
+
+
 def main():
     start = time.time()
     """Command line application to download youtube videos."""
@@ -1029,88 +1114,9 @@ def main():
     if args.build_playback_report:
         build_playback_report(args.url)
 
-    if args.file or args.playlist or args.file:
+    if any([args.url, args.playlist, args.channel, os.path.exists(args.file)]):
         downloads = get_url_list(args)
-        for url in downloads:
-            start_url = time.time()
-            logger.info("Trying to download URL = {url}".format(url=url))
-            for i in range(1, args.retry+1):
-                yt = get_correct_yt(url)
-                if not yt:
-                    continue
-
-                logger.info("Title = {title}".format(title=yt.title))
-                logger.info("Description = {description}".format(
-                    description=yt.description))
-                logger.info("Views = {views}".format(views=yt.views))
-                logger.info("Rating = {rating}".format(rating=yt.rating))
-                logger.info("Length = {length}".format(length=yt.length))
-                logger.info("Thumbnail_url = {thumbnail_url}".format(
-                    thumbnail_url=yt.thumbnail_url))
-
-                get_captions(yt, args.caption)
-
-                itags = get_target_itags(
-                    yt=yt, quality=args.quality, mode=args.mode)
-
-                logger.debug("itag list = {itags}".format(itags=itags))
-
-                # download target youtube
-                for i, itag in enumerate(itags):
-                    start_itag = time.time()
-                    stream = yt.streams.get_by_itag(itag)
-                    logger.info("Filesize = {filesize}".format(
-                        filesize=stream.filesize))
-
-                    filepath = download_youtube_by_itag(yt, itag)
-                    if filepath:
-                        logger.info(
-                            "Successfully download to {filepath}".format(filepath=filepath))
-
-                    end_itag = time.time()
-                    duration = end_itag - start_itag
-                    logger.debug(
-                        "URL = [{url}] processing finished".format(url=url))
-                    logger.debug(
-                        "Execution in [{duration}] seconds with filesize [{filesize}]".format(duration=duration, filesize=stream.filesize))
-
-                    logger.debug(
-                        "Average speed = [{avg} Mbps]".format(avg=stream.filesize/8/1024/duration))
-
-                # update items in ini file
-                else:
-                    # join video/audio if required
-                    if args.join:
-                        ffmpeg_binary = download_ffmpeg()
-                        os.chmod(ffmpeg_binary, stat.S_IRWXU |
-                                 stat.S_IRWXG | stat.S_IRWXO)
-                        #copyfile(ffmpeg_binary, "ffmpeg")
-                        video_path, audio_path, final_path = ffmpeg_process(
-                            yt, "best", args.target, ffmpeg_binary)
-                        if not args.filekeep:
-                            os.unlink(video_path)
-                            os.unlink(audio_path)
-
-                    if args.file and (not args.listkeep):
-                        remove_item_in_file(args.file, item=url)
-
-                # break retry level here
-                break
-
-            # failed after retry multiple times
-            else:
-                logger.fatal(
-                    "Download Youtube Video/Audio from URL = [{url}] FAILED".format(url=url))
-
-            end_url = time.time()
-            duration = end_url - start_url
-            logger.debug(
-                ("URL processing finished, execution in [%s] seconds") % (duration))
-
-        # finish all downloads
-        else:
-            logger.info(
-                "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(downloads)))
+        download_youtube_object(downloads)
 
     end = time.time()
     duration = end - start
