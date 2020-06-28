@@ -862,11 +862,11 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     start = time.time()
     if mode.upper() == 'VIDEO_AUDIO':
         streams = yt.streams.filter(
-            progressive=True).order_by('itag')
+            progressive=True).order_by('res').desc()
     elif mode.upper() == 'VIDEO':
-        streams = yt.streams.filter(only_video=True).order_by('itag')
+        streams = yt.streams.filter(only_video=True).order_by('res').desc()
     elif mode.upper() == 'AUDIO':
-        streams = yt.streams.filter(only_audio=True).order_by('itag')
+        streams = yt.streams.filter(only_audio=True, subtype='mp4').order_by('abr').desc()
     elif mode.upper() == 'ALL':
         streams = yt.streams
     else:
