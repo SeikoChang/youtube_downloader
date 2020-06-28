@@ -51,16 +51,16 @@ else:
     import urlparse
 
 
+base = os.path.basename(__file__)
+filename, file_extension = os.path.splitext(base)
+defaultIni = '{name}.{ext}'.format(name=filename, ext='ini')
+defaultLog = "{name}.{ext}".format(name=filename, ext='log')
+
 logger = logging.getLogger(__name__)
 
 
 def get_arguments():
     print(main.__doc__)
-
-    base = os.path.basename(__file__)
-    filename, file_extension = os.path.splitext(base)
-    defaultIni = '{name}.{ext}'.format(name=filename, ext='ini')
-    defaultLog = "{name}.{ext}".format(name=filename, ext='log')
 
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('url', nargs='?', help=(
@@ -485,7 +485,7 @@ def is_playList(string):
     # example, https://www.youtube.com/playlist?list=PL-g0fdC5RMboYEyt6QS2iLb_1m7QcgfHk
     try:
         regex_search(
-            r"(playlist\?list=)([0-9A-Za-z_-]{34}).*", string, group=1)
+            r"(playlist\?list=)([0-9A-Za-z_-]{24,34}).*", string, group=1)
         return True
     except:
         return False
@@ -809,26 +809,45 @@ def get_url_list(args):
         for video in playlist:
             # video.streams.get_highest_resolution().download()
             downloads.append(video)
-    elif args.file:
-        with open(args.file, "r") as fp:
-            for line in fp:
-                if is_channel(line):
-                    logger.debug("[%s] is_channel" % line)
-                    videos = get_video_from_channel(line)
-                    downloads.append(videos)
-                elif is_playList(line):
-                    logger.debug("[%s] is_playList" % line)
-                    playlist = Playlist(line)
-                    for video in playlist:
-                        downloads.append(video + '\n')
-                elif is_watchUrl(line):
-                    logger.debug("[%s] is_watchUrl" % line)
-                    downloads.append(line)
+    elif args.file and os.path.exists(args.file):
+        downloads = get_url_list_from_file(args.file)
 
-        logger.debug('All required download URLs = %s' % downloads)
+    logger.debug('All required download URLs = %s' % downloads)
+
+    return downloads
+
+
+def get_url_list_from_file(file=defaultIni):
+    downloads = list()
+
+    if file and os.path.exists(file):
+        with open(file, "r") as fp:
+            for line in fp:
+                downloads += get_url_by_item(line)
         with open(args.file, "w") as f:
             for url in downloads:
                 f.write(url)
+
+    return downloads
+
+
+def get_url_by_item(item):
+    downloads = list()
+
+    if is_channel(item):
+        logger.debug("[%s] is_channel" % item)
+        videos = get_video_from_channel(item)
+        downloads.append(videos)
+    elif is_playList(item):
+        logger.debug("[%s] is_playList" % item)
+        playlist = Playlist(item)
+        title = playlist.title()
+        logger.debug("[%s]" % title)
+        for video in playlist:
+            downloads.append(video + '\n')
+    elif is_watchUrl(item):
+        logger.debug("[%s] is_watchUrl" % item)
+        downloads.append(item)
 
     return downloads
 
@@ -1014,7 +1033,7 @@ def get_video_from_channel(url):
     return videos
 
 
-def download_youtube_object(downloads):
+def download_youtube_by_url(downloads):
     for url in downloads:
         start_url = time.time()
         logger.info("Trying to download URL = {url}".format(url=url))
@@ -1116,7 +1135,7 @@ def main():
 
     if any([args.url, args.playlist, args.channel, os.path.exists(args.file)]):
         downloads = get_url_list(args)
-        download_youtube_object(downloads)
+        download_youtube_by_url(downloads)
 
     end = time.time()
     duration = end - start
