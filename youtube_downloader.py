@@ -171,7 +171,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-m", "--mode", default='AUDIO', const='AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
+        "-m", "--mode", default='VIDEO_AUDIO', const='VIDEO_AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
             "choose only video/audio or video and audio together"
         )
     )
@@ -212,8 +212,8 @@ def get_arguments():
         "--join",
         type=str2bool,
         nargs='?',
-        default=False,
-        const=False,
+        default=True,
+        const=True,
         help=(
             "join original best audio/video files"
         )
@@ -862,9 +862,9 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     start = time.time()
     if mode.upper() == 'VIDEO_AUDIO':
         streams = yt.streams.filter(
-            progressive=True).order_by('res').desc()
+            progressive=True).order_by('resolution').desc()
     elif mode.upper() == 'VIDEO':
-        streams = yt.streams.filter(only_video=True).order_by('res').desc()
+        streams = yt.streams.filter(only_video=True).order_by('resolution').desc()
     elif mode.upper() == 'AUDIO':
         streams = yt.streams.filter(only_audio=True, subtype='mp4').order_by('abr').desc()
     elif mode.upper() == 'ALL':
