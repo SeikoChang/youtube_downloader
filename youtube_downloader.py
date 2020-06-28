@@ -840,7 +840,10 @@ def get_url_by_item(item):
         downloads.append(videos)
     elif is_playList(item):
         logger.debug("[%s] is_playList" % item)
-        playlist = Playlist(item)
+        for _ in range(1, args.retry+1):
+            playlist = Playlist(item)
+            if len(playlist) > 0:
+                break
         title = playlist.title()
         logger.debug("[%s]" % title)
         for video in playlist:
