@@ -631,6 +631,16 @@ def on_progress(stream, chunk, bytes_remaining):
     display_progress_bar(bytes_received, filesize)
 
 
+def remove_item_in_file(file, item):
+    if file and os.path.exists(file):
+        with open(file, "r") as f:
+            lines = f.readlines()
+        with open(file, "w") as f:
+            for line in lines:
+                if line != item:
+                    f.write(line)
+
+
 def get_correct_yt(url):
     yt = None
     # Get Youtube Object with correct filename
@@ -773,7 +783,7 @@ def get_captions(yt, lang):
         codes = query_captions_codes(yt)
         for code in codes:
             if (lang == True) or (code.lower() == lang.lower()):
-                #logger.info('downloading captions for language code = [%s]' % code)
+                # logger.info('downloading captions for language code = [%s]' % code)
                 try:
                     filepath = yt.captions[code].download(
                         title=filename, srt=True, output_path=args.target)
@@ -791,9 +801,9 @@ def query_captions_codes(yt):
     captions = yt.captions
     logger.debug('captions = %s' % captions)
     for caption in captions:
-        #logger.debug('caption = %s' % caption)
+        # logger.debug('caption = %s' % caption)
         code = caption.code
-        #logger.debug('code = [%s]' % code)
+        # logger.debug('code = [%s]' % code)
         codes.append(code)
 
     return codes
@@ -810,28 +820,29 @@ def get_url_list(args):
             # video.streams.get_highest_resolution().download()
             downloads.append(video)
     elif args.file and os.path.exists(args.file):
-        downloads = get_url_list_from_file(args.file)
+        downloads = get_url_list_from_file(args.file, args.retry)
 
     logger.debug('All required download URLs = %s' % downloads)
 
     return downloads
 
 
-def get_url_list_from_file(file=defaultIni):
+def get_url_list_from_file(file, retry):
+    file = file or defaultIni
     downloads = list()
 
     if file and os.path.exists(file):
         with open(file, "r") as fp:
             for line in fp:
-                downloads += get_url_by_item(line)
-        with open(args.file, "w") as f:
+                downloads += get_url_by_item(line, retry)
+        with open(file, "w") as f:
             for url in downloads:
                 f.write(url)
 
     return downloads
 
 
-def get_url_by_item(item):
+def get_url_by_item(item, retry):
     downloads = list()
 
     if is_channel(item):
@@ -840,7 +851,7 @@ def get_url_by_item(item):
         downloads.append(videos)
     elif is_playList(item):
         logger.debug("[%s] is_playList" % item)
-        for _ in range(1, args.retry+1):
+        for _ in range(1, retry+1):
             playlist = Playlist(item)
             if len(playlist) > 0:
                 break
@@ -864,9 +875,11 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
         streams = yt.streams.filter(
             progressive=True).order_by('resolution').desc()
     elif mode.upper() == 'VIDEO':
-        streams = yt.streams.filter(only_video=True).order_by('resolution').desc()
+        streams = yt.streams.filter(
+            only_video=True).order_by('resolution').desc()
     elif mode.upper() == 'AUDIO':
-        streams = yt.streams.filter(only_audio=True, subtype='mp4').order_by('abr').desc()
+        streams = yt.streams.filter(
+            only_audio=True, subtype='mp4').order_by('abr').desc()
     elif mode.upper() == 'ALL':
         streams = yt.streams
     else:
@@ -915,16 +928,8 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     return itags
 
 
-def remove_item_in_file(file, item):
-    with open(file, "r") as f:
-        lines = f.readlines()
-    with open(file, "w") as f:
-        for line in lines:
-            if line != item:
-                f.write(line)
-
-
-def download_youtube_by_itag(yt, itag, target=os.getcwd()):
+def download_youtube_by_itag(yt, itag, target):
+    target = target or os.getcwd()
     filepath = None
     try:
         url = yt.watch_url
@@ -951,7 +956,109 @@ def download_youtube_by_itag(yt, itag, target=os.getcwd()):
     return filepath
 
 
-def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg: str = "ffmpeg") -> None:
+def download_youtube_by_url_list(file, urls, caption, quality, mode, target, join, filekeep, listkeep, retry):
+    file = file or defaultIni
+    for url in urls:
+        start_url = time.time()
+        logger.info("Trying to download URL = {url}".format(url=url))
+        for _ in range(1, retry+1):
+            yt = get_correct_yt(url)
+            if not yt:
+                continue
+
+            logger.info("Title = {title}".format(title=yt.title))
+            logger.info("Description = {description}".format(
+                description=yt.description))
+            logger.info("Views = {views}".format(views=yt.views))
+            logger.info("Rating = {rating}".format(rating=yt.rating))
+            logger.info("Length = {length}".format(length=yt.length))
+            logger.info("Thumbnail_url = {thumbnail_url}".format(
+                thumbnail_url=yt.thumbnail_url))
+
+            get_captions(yt, caption)
+
+            itags = get_target_itags(
+                yt=yt, quality=quality, mode=mode)
+
+            logger.debug("itag list = {itags}".format(itags=itags))
+
+            # download target youtube
+            for _, itag in enumerate(itags):
+                start_itag = time.time()
+                stream = yt.streams.get_by_itag(itag)
+                logger.info("Filesize = {filesize}".format(
+                    filesize=stream.filesize))
+
+                filepath = download_youtube_by_itag(yt, itag, target)
+                if filepath:
+                    logger.info(
+                        "Successfully download to {filepath}".format(filepath=filepath))
+
+                end_itag = time.time()
+                duration = end_itag - start_itag
+                logger.debug(
+                    "URL = [{url}] processing finished".format(url=url))
+                logger.debug(
+                    "Execution in [{duration}] seconds with filesize [{filesize}]".format(duration=duration, filesize=stream.filesize))
+
+                logger.debug(
+                    "Average speed = [{avg} Mbps]".format(avg=stream.filesize/8/1024/duration))
+
+            # update items in ini file
+            else:
+                # join video/audio if required
+                if join:
+                    ffmpeg_binary = download_ffmpeg()
+                    os.chmod(ffmpeg_binary, stat.S_IRWXU |
+                             stat.S_IRWXG | stat.S_IRWXO)
+                    # copyfile(ffmpeg_binary, "ffmpeg")
+                    video_path, audio_path, final_path = ffmpeg_join(
+                        yt, "best", target, ffmpeg_binary)
+                    if not filekeep:
+                        os.unlink(video_path)
+                        os.unlink(audio_path)
+
+                if os.path.exists(file) and (not listkeep):
+                    remove_item_in_file(ile, item=url)
+
+            # break retry level here
+            break
+
+        # failed after retry multiple times
+        else:
+            logger.fatal(
+                "Download Youtube Video/Audio from URL = [{url}] FAILED".format(url=url))
+
+        end_url = time.time()
+        duration = end_url - start_url
+        logger.debug(
+            ("URL processing finished, execution in [%s] seconds") % (duration))
+
+    # finish all downloads
+    else:
+        logger.info(
+            "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(downloads)))
+
+
+def get_video_from_channel(url):
+    videos = list()
+
+    try:
+        channel_id: str = regex_search(
+            r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
+    except IndexError:  # assume that url is just the id
+        channel_id = url
+
+    channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
+    html = request.get(channel_url)
+
+    video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
+    videos = uniqueify(video_regex.findall(html))
+
+    return videos
+
+
+def ffmpeg_join(youtube: YouTube, resolution: str, target: str = None, ffmpeg: str = None) -> None:
     """
     Decides the correct video stream to download, then calls _ffmpeg_downloader.
 
@@ -964,6 +1071,7 @@ def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg
     """
     youtube.register_on_progress_callback(on_progress)
     target = target or os.getcwd()
+    ffmpeg = ffmpeg or "ffmpeg"
 
     if resolution == "best":
         highest_quality_stream = (
@@ -1003,9 +1111,9 @@ def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg
 
     video_path = audio_path = final_path = None
     video_path = download_youtube_by_itag(
-        youtube, video_stream.itag, args.target)
+        youtube, video_stream.itag, target)
     audio_path = download_youtube_by_itag(
-        youtube, audio_stream.itag, args.target)
+        youtube, audio_stream.itag, target)
     if all([video_path, audio_path]):
         final_path = os.path.join(
             target, f"{video_stream.title}_HQ.{video_stream.subtype}"
@@ -1016,107 +1124,6 @@ def ffmpeg_process(youtube: YouTube, resolution: str, target: str = None, ffmpeg
         )
 
     return video_path, audio_path, final_path
-
-
-def get_video_from_channel(url):
-    videos = list()
-
-    try:
-        channel_id: str = regex_search(
-            r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
-    except IndexError:  # assume that url is just the id
-        channel_id = url
-
-    channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
-    html = request.get(channel_url)
-
-    video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
-    videos = uniqueify(video_regex.findall(html))
-
-    return videos
-
-
-def download_youtube_by_url(downloads):
-    for url in downloads:
-        start_url = time.time()
-        logger.info("Trying to download URL = {url}".format(url=url))
-        for _ in range(1, args.retry+1):
-            yt = get_correct_yt(url)
-            if not yt:
-                continue
-
-            logger.info("Title = {title}".format(title=yt.title))
-            logger.info("Description = {description}".format(
-                description=yt.description))
-            logger.info("Views = {views}".format(views=yt.views))
-            logger.info("Rating = {rating}".format(rating=yt.rating))
-            logger.info("Length = {length}".format(length=yt.length))
-            logger.info("Thumbnail_url = {thumbnail_url}".format(
-                thumbnail_url=yt.thumbnail_url))
-
-            get_captions(yt, args.caption)
-
-            itags = get_target_itags(
-                yt=yt, quality=args.quality, mode=args.mode)
-
-            logger.debug("itag list = {itags}".format(itags=itags))
-
-            # download target youtube
-            for _, itag in enumerate(itags):
-                start_itag = time.time()
-                stream = yt.streams.get_by_itag(itag)
-                logger.info("Filesize = {filesize}".format(
-                    filesize=stream.filesize))
-
-                filepath = download_youtube_by_itag(yt, itag, args.target)
-                if filepath:
-                    logger.info(
-                        "Successfully download to {filepath}".format(filepath=filepath))
-
-                end_itag = time.time()
-                duration = end_itag - start_itag
-                logger.debug(
-                    "URL = [{url}] processing finished".format(url=url))
-                logger.debug(
-                    "Execution in [{duration}] seconds with filesize [{filesize}]".format(duration=duration, filesize=stream.filesize))
-
-                logger.debug(
-                    "Average speed = [{avg} Mbps]".format(avg=stream.filesize/8/1024/duration))
-
-            # update items in ini file
-            else:
-                # join video/audio if required
-                if args.join:
-                    ffmpeg_binary = download_ffmpeg()
-                    os.chmod(ffmpeg_binary, stat.S_IRWXU |
-                             stat.S_IRWXG | stat.S_IRWXO)
-                    #copyfile(ffmpeg_binary, "ffmpeg")
-                    video_path, audio_path, final_path = ffmpeg_process(
-                        yt, "best", args.target, ffmpeg_binary)
-                    if not args.filekeep:
-                        os.unlink(video_path)
-                        os.unlink(audio_path)
-
-                if args.file and (not args.listkeep):
-                    remove_item_in_file(args.file, item=url)
-
-            # break retry level here
-            break
-
-        # failed after retry multiple times
-        else:
-            logger.fatal(
-                "Download Youtube Video/Audio from URL = [{url}] FAILED".format(url=url))
-
-        end_url = time.time()
-        duration = end_url - start_url
-        logger.debug(
-            ("URL processing finished, execution in [%s] seconds") % (duration))
-
-    # finish all downloads
-    else:
-        logger.info(
-            "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(downloads)))
 
 
 def main():
@@ -1138,7 +1145,8 @@ def main():
 
     if any([args.url, args.playlist, args.channel, os.path.exists(args.file)]):
         downloads = get_url_list(args)
-        download_youtube_by_url(downloads)
+        download_youtube_by_url_list(
+            args.file, downloads, args.caption, args.quality, args.mode, args.target, args.join, args.filekeep, args.listkeep, args.retry)
 
     end = time.time()
     duration = end - start
