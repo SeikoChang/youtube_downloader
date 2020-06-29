@@ -170,7 +170,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-m", "--mode", default='VIDEO_AUDIO', const='VIDEO_AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
+        "-m", "--mode", default='AUDIO', const='AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
             "choose only video/audio or video and audio together"
         )
     )
@@ -211,8 +211,8 @@ def get_arguments():
         "--join",
         type=str2bool,
         nargs='?',
-        default=True,
-        const=True,
+        default=False,
+        const=False,
         help=(
             "join original best audio/video files"
         )
@@ -1012,16 +1012,18 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                     logger.info(
                         "Successfully download to {filepath}".format(filepath=filepath))
 
-                if convert:
-                    try:
-                        mp3 = ffmpeg_aac_convert_mp3(aac=filepath, target=target)
-                        logger.info(
-                            "Successfully {filepath} convert to {mp3}".format(filepath=filepath, mp3=mp3))
-                    except:
-                        logger.warning(
-                            "Unable to convert {filepath} to mp3 file".format(
-                                filepath, filepath)
-                        )
+                    if convert:
+                        try:
+                            mp3 = ffmpeg_aac_convert_mp3(
+                                aac=filepath, target=target)
+                            logger.info(
+                                "Successfully {filepath} convert to {mp3}".format(filepath=filepath, mp3=mp3))
+                        except:
+                            logger.warning(
+                                "Unable to convert {filepath} to mp3 file".format(
+                                    filepath, filepath)
+                            )
+
                 end_itag = time.time()
                 duration = end_itag - start_itag
                 logger.debug(
