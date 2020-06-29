@@ -26,7 +26,6 @@ import operator
 import platform
 from download_file import download_file as download_file
 import zipfile
-import ntpath
 import contextlib
 import lzma
 import tarfile
@@ -228,6 +227,18 @@ def get_arguments():
         const=True,
         help=(
             "keep original audio/video files after joined"
+        )
+    )
+
+    parser.add_argument(
+        "-c",
+        "--convert",
+        type=str2bool,
+        nargs='?',
+        default=True,
+        const=True,
+        help=(
+            "convert aac to mp3"
         )
     )
 
@@ -956,8 +967,15 @@ def download_youtube_by_itag(yt, itag, target):
     return filepath
 
 
-def download_youtube_by_url_list(file, urls, caption, quality, mode, target, join, filekeep, listkeep, retry):
+def download_youtube_by_url_list(file, urls, caption, quality, mode, target, join, filekeep, listkeep, convert, retry):
     file = file or defaultIni
+
+    if join or convert:
+        ffmpeg_binary = download_ffmpeg()
+        os.chmod(ffmpeg_binary, stat.S_IRWXU |
+                 stat.S_IRWXG | stat.S_IRWXO)
+        # copyfile(ffmpeg_binary, "ffmpeg")
+
     for url in urls:
         start_url = time.time()
         logger.info("Trying to download URL = {url}".format(url=url))
@@ -994,6 +1012,16 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                     logger.info(
                         "Successfully download to {filepath}".format(filepath=filepath))
 
+                if convert:
+                    try:
+                        mp3 = ffmpeg_aac_convert_mp3(aac=filepath, target=target)
+                        logger.info(
+                            "Successfully {filepath} convert to {mp3}".format(filepath=filepath, mp3=mp3))
+                    except:
+                        logger.warning(
+                            "Unable to convert {filepath} to mp3 file".format(
+                                filepath, filepath)
+                        )
                 end_itag = time.time()
                 duration = end_itag - start_itag
                 logger.debug(
@@ -1008,18 +1036,16 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
             else:
                 # join video/audio if required
                 if join:
-                    ffmpeg_binary = download_ffmpeg()
-                    os.chmod(ffmpeg_binary, stat.S_IRWXU |
-                             stat.S_IRWXG | stat.S_IRWXO)
-                    # copyfile(ffmpeg_binary, "ffmpeg")
-                    video_path, audio_path, final_path = ffmpeg_join(
+                    video_path, audio_path, _ = ffmpeg_join_audio_video(
                         yt, "best", target, ffmpeg_binary)
                     if not filekeep:
                         os.unlink(video_path)
                         os.unlink(audio_path)
+                    elif convert:
+                        ffmpeg_aac_convert_mp3(aac=audio_path, target=target)
 
                 if os.path.exists(file) and (not listkeep):
-                    remove_item_in_file(ile, item=url)
+                    remove_item_in_file(file, item=url)
 
             # break retry level here
             break
@@ -1037,7 +1063,9 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
     # finish all downloads
     else:
         logger.info(
-            "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(downloads)))
+            "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(urls)))
+
+    return True
 
 
 def get_video_from_channel(url):
@@ -1058,7 +1086,7 @@ def get_video_from_channel(url):
     return videos
 
 
-def ffmpeg_join(youtube: YouTube, resolution: str, target: str = None, ffmpeg: str = None) -> None:
+def ffmpeg_join_audio_video(youtube: YouTube, resolution: str, target: str = None, ffmpeg: str = None) -> None:
     """
     Decides the correct video stream to download, then calls _ffmpeg_downloader.
 
@@ -1115,8 +1143,9 @@ def ffmpeg_join(youtube: YouTube, resolution: str, target: str = None, ffmpeg: s
     audio_path = download_youtube_by_itag(
         youtube, audio_stream.itag, target)
     if all([video_path, audio_path]):
+        filename = to_unicode(safe_filename(youtube.title))
         final_path = os.path.join(
-            target, f"{video_stream.title}_HQ.{video_stream.subtype}"
+            target, f"{filename}_HQ.{video_stream.subtype}"
         )
         subprocess.run(  # nosec
             [ffmpeg, "-i", video_path, "-i", audio_path,
@@ -1124,6 +1153,27 @@ def ffmpeg_join(youtube: YouTube, resolution: str, target: str = None, ffmpeg: s
         )
 
     return video_path, audio_path, final_path
+
+
+def ffmpeg_aac_convert_mp3(aac: str, sampling: str = None, abr: str = None, target: str = None, ffmpeg: str = None) -> None:
+    sampling = sampling or "44100"
+    abr = abr or "192k"
+    target = target or os.getcwd()
+    ffmpeg = ffmpeg or "ffmpeg"
+
+    base = os.path.basename(aac)
+    name, _ = os.path.splitext(base)
+
+    if os.path.exists(aac):
+        final_path = os.path.join(
+            target, f"{name}.mp3"
+        )
+        subprocess.run(  # nosec
+            [ffmpeg, "-i", aac, "-vn", "-ar",
+                sampling, "-ac", "2", "-b:a", abr, final_path, "-y", ]
+        )
+
+    return final_path
 
 
 def main():
@@ -1146,7 +1196,7 @@ def main():
     if any([args.url, args.playlist, args.channel, os.path.exists(args.file)]):
         downloads = get_url_list(args)
         download_youtube_by_url_list(
-            args.file, downloads, args.caption, args.quality, args.mode, args.target, args.join, args.filekeep, args.listkeep, args.retry)
+            args.file, downloads, args.caption, args.quality, args.mode, args.target, args.join, args.filekeep, args.listkeep, args.convert, args.retry)
 
     end = time.time()
     duration = end - start
