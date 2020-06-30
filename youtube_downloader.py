@@ -338,10 +338,12 @@ def download_ffmpeg(out=os.getcwd()):
             ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip"
         ffmpeg = download_file(url=ffmpeg_url, out=out)
         logger.info("%s downloaded" % ffmpeg)
-        unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
+        #unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
         with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
             #zip_ref.extractall(out)
             for file in zip_ref.filelist:
+                if not os.path.exists(file.filename):
+                    zip_ref.extract(file, out)
                 if file.filename.endswith("ffmpeg.exe") and (not file.is_dir()) and int(file.file_size) > 0:
                     ffmpeg_binary = file.filename
                     break
@@ -367,10 +369,12 @@ def download_ffmpeg(out=os.getcwd()):
         ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/macos64/static/ffmpeg-latest-macos64-static.zip"
         ffmpeg = download_file(url=ffmpeg_url, out=out)
         logger.info("%s downloaded" % ffmpeg)
-        unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
+        #unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
         with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
             #zip_ref.extractall(out)
             for file in zip_ref.filelist:
+                if not os.path.exists(file.filename):
+                    zip_ref.extract(file, out)
                 if file.filename.endswith("ffmpeg") and (not file.is_dir()) and int(file.file_size) > 0:
                     ffmpeg_binary = file.filename
                     break
