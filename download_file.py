@@ -274,8 +274,7 @@ def download_file(url, out=None, logfile=None, verbosity='WARNING', quiet=False,
         'Accept-Language': 'en-US,en;q=0.8',
         'Connection': 'keep-alive'}
 
-    response = False
-    e = False
+    response = e = False
 
     # timeout in seconds
     timeout = 10
@@ -304,6 +303,7 @@ def download_file(url, out=None, logfile=None, verbosity='WARNING', quiet=False,
                 logger.error("[{}] IS CURRENTLY NOT AVAILABLE \n {}".format(url, response.read()))
             size = response.length
             logger.info('File Size = [{}]'.format(size))
+            break
         except urllib2.HTTPError as e:
             logger.exception('HTTP Error {}: {}'.format(str(e.code), str(e.msg)))
         except urllib2.URLError as e:
@@ -312,15 +312,11 @@ def download_file(url, out=None, logfile=None, verbosity='WARNING', quiet=False,
             logger.exception('HTTP Exception')
         except urllib2.socket.timeout as e:
             logger.exception('Urllib2 Timeout Exception')
-        except ValueError:
+        except ValueError as e:
             logger.exception('Unknown url type: %s' % url)
-        except Exception:
+        except Exception as e:
             logger.exception('Generic Exception: ' + traceback.format_exc())
 
-        if response:
-            break
-        else:
-            pass
     else:
         logger.critical('Unable to get file from = [%s] retry = [%s]' % (url, retry))
         if e:
