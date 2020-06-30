@@ -390,7 +390,7 @@ def download_ffmpeg(out=os.getcwd()):
 def fib(n):
     if n == 0: return 0
     elif n == 1: return 1
-    else: return F(n-1)+F(n-2)
+    else: return fib(n-1)+fib(n-2)
 
 
 def symlink(source, link_name):
@@ -674,7 +674,7 @@ def remove_item_in_file(file, item):
                     f.write(line)
 
 
-def get_correct_yt(url):
+def get_correct_yt(url, retry):
     yt = None
     # Get Youtube Object with correct filename
 
@@ -684,13 +684,16 @@ def get_correct_yt(url):
     else:
         proxy_params = None
 
-    for i in range(1, args.retry+1):
+    for i in range(1, retry+1):
         try:
             yt = YouTube(
                 url, on_progress_callback=on_progress, proxies=proxy_params)
-            filename = to_unicode(yt.streams.first().default_filename)
+            filename = to_unicode(safe_filename(yt.title))
+            logger.debug("Filename = {filename}".format(filename=filename))
             if 'YouTube' not in filename:
                 break
+            else:
+                time.sleep(fib(i))
         except Exception as ex:
             logger.error('Unable to get FileName from = [%s]' % url)
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -848,6 +851,14 @@ def get_url_list(args):
         if args.itag:
             downloads.append(args.url)
     elif args.playlist:
+        for i in range(1, retry+1):
+            playlist = Playlist(item)
+            if len(playlist) > 0:
+                break
+            else:
+                time.sleep(fib(i))
+        title = playlist.title()
+        logger.debug("[%s]" % title)
         playlist = Playlist(args.playlist)
         for video in playlist:
             # video.streams.get_highest_resolution().download()
@@ -1006,7 +1017,7 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
         start_url = time.time()
         logger.info("Trying to download URL = {url}".format(url=url))
         for _ in range(1, retry+1):
-            yt = get_correct_yt(url)
+            yt = get_correct_yt(url, retry)
             if not yt:
                 continue
 
