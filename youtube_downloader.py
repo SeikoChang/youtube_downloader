@@ -355,8 +355,10 @@ def download_ffmpeg(out=os.getcwd()):
         logger.info("%s downloaded" % ffmpeg)
         with contextlib.closing(lzma.LZMAFile(ffmpeg)) as xz:
             with tarfile.open(fileobj=xz) as f:
-                f.extractall(out)
+                #f.extractall(out)
                 for member in f.members:
+                    if not os.path.exists(member.name):
+                        f.extractfile(member)
                     if member.name.endswith('ffmpeg') and int(member.size) > 0 and int(member.mode) == 493:
                         ffmpeg_binary = member.name
                         break
