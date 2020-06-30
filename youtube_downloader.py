@@ -170,7 +170,7 @@ def get_arguments():
     )
 
     parser.add_argument(
-        "-m", "--mode", default='AUDIO', const='AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
+        "-m", "--mode", default='VIDEO_AUDIO', const='VIDEO_AUDIO', nargs='?', type=str, choices=['VIDEO_AUDIO', 'VIDEO', 'AUDIO', 'ALL'], help=(
             "choose only video/audio or video and audio together"
         )
     )
@@ -211,8 +211,8 @@ def get_arguments():
         "--join",
         type=str2bool,
         nargs='?',
-        default=False,
-        const=False,
+        default=True,
+        const=True,
         help=(
             "join original best audio/video files"
         )
@@ -317,6 +317,18 @@ def detect_platform():
     return platform.system(), arch
 
 
+def unzip_without_overwrite(src_path, dst_dir, pwd=None):
+    with zipfile.ZipFile(src_path) as zf:
+        members = zf.namelist()
+        for member in members:
+            arch_info = zf.getinfo(member)
+            arch_name = arch_info.filename.replace('/', os.path.sep)
+            dst_path = os.path.join(dst_dir, arch_name)
+            dst_path = os.path.normpath(dst_path)
+            if not os.path.exists(dst_path):
+                zf.extract(arch_info, dst_dir, pwd)
+
+
 def download_ffmpeg(out=os.getcwd()):
     platform, arch = detect_platform()
     if platform.lower() == "windows":
@@ -326,8 +338,9 @@ def download_ffmpeg(out=os.getcwd()):
             ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip"
         ffmpeg = download_file(url=ffmpeg_url, out=out)
         logger.info("%s downloaded" % ffmpeg)
+        unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
         with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
-            zip_ref.extractall(out)
+            #zip_ref.extractall(out)
             for file in zip_ref.filelist:
                 if file.filename.endswith("ffmpeg.exe") and (not file.is_dir()) and int(file.file_size) > 0:
                     ffmpeg_binary = file.filename
@@ -352,8 +365,9 @@ def download_ffmpeg(out=os.getcwd()):
         ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/macos64/static/ffmpeg-latest-macos64-static.zip"
         ffmpeg = download_file(url=ffmpeg_url, out=out)
         logger.info("%s downloaded" % ffmpeg)
+        unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
         with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
-            zip_ref.extractall(out)
+            #zip_ref.extractall(out)
             for file in zip_ref.filelist:
                 if file.filename.endswith("ffmpeg") and (not file.is_dir()) and int(file.file_size) > 0:
                     ffmpeg_binary = file.filename
@@ -862,7 +876,7 @@ def get_url_by_item(item, retry):
         downloads.append(videos)
     elif is_playList(item):
         logger.debug("[%s] is_playList" % item)
-        for _ in range(1, retry+1):
+        for _ in range(1, 10+1):
             playlist = Playlist(item)
             if len(playlist) > 0:
                 break
