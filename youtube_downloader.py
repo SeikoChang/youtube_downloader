@@ -387,6 +387,12 @@ def download_ffmpeg(out=os.getcwd()):
     return ffmpeg_binary
 
 
+def fib(n):
+    if n == 0: return 0
+    elif n == 1: return 1
+    else: return F(n-1)+F(n-2)
+
+
 def symlink(source, link_name):
     os_symlink = getattr(os, "symlink", None)
     try:
@@ -878,10 +884,12 @@ def get_url_by_item(item, retry):
         downloads.append(videos)
     elif is_playList(item):
         logger.debug("[%s] is_playList" % item)
-        for _ in range(1, 10+1):
+        for i in range(1, retry+1):
             playlist = Playlist(item)
             if len(playlist) > 0:
                 break
+            else:
+                time.sleep(fib(i))
         title = playlist.title()
         logger.debug("[%s]" % title)
         for video in playlist:
