@@ -702,6 +702,7 @@ def get_correct_yt(url, retry):
     else:
         logger.error(
             "Unable to get correct YouTube object for {retry} times, skip download this time".format(retry=args.retry))
+        yt = None
 
     return yt
 
