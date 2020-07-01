@@ -769,7 +769,7 @@ def get_correct_videos_from_playlist(url, retry):
     while len(videos) == 0 or title == None:
         videos, title = get_videos_from_playlist(url)
 
-        logger.debug(f"{i} retry in get_correct_videos_from_channel()")
+        logger.debug(f"{i} retry in get_correct_videos_from_playlist()")
         #logger.info(fib(i))
         i+=1
         if i > retry+100: break
@@ -941,7 +941,7 @@ def get_url_list_from_file(file, retry):
         urls = uniqueify(urls)
         with open(file, "w") as f:
             for url in urls:
-                f.write(url + '\n')
+                f.write(url)
 
     return urls
 
