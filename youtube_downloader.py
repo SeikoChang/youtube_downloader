@@ -736,11 +736,11 @@ def get_videos_from_channel(url):
 
 def get_correct_videos_from_channel(url, retry):
     videos = list()
-    i = 0
+    i = 1
     while len(videos) == 0:
         videos = get_videos_from_channel(url)
 
-        logger.info(i)
+        logger.debug(f"{i} retry in get_correct_videos_from_channel()")
         #logger.info(fib(i))
         i+=1
         if i > retry+100: break
@@ -765,11 +765,11 @@ def get_videos_from_playlist(url):
 def get_correct_videos_from_playlist(url, retry):
     videos = list()
     title = None
-    i = 0
+    i = 1
     while len(videos) == 0 or title == None:
         videos, title = get_videos_from_playlist(url)
 
-        logger.info(i)
+        logger.debug(f"{i} retry in get_correct_videos_from_channel()")
         #logger.info(fib(i))
         i+=1
         if i > retry+100: break
