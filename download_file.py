@@ -319,9 +319,9 @@ def download_file(url, out=None, logfile=None, verbosity='WARNING', quiet=False,
 
     else:
         logger.critical('Unable to get file from = [%s] retry = [%s]' % (url, retry))
-        if e:
+        try:
             return e
-        else:
+        except:
             return None
 
     # get filename of url
