@@ -879,15 +879,19 @@ def get_url_list(args):
 def get_url_list_from_file(file, retry):
     file = file or defaultIni
     downloads = list()
+    urls = list()
 
     if file and os.path.exists(file):
         with open(file, "r") as fp:
             for line in fp:
-                downloads += get_url_by_item(line, retry)
-
-        downloads = uniqueify(downloads)
-        with open(file, "w") as f:
+                downloads.append(line)
+            uniqueify(downloads)
             for url in downloads:
+                urls += get_url_by_item(url, retry)
+
+        urls = uniqueify(urls)
+        with open(file, "w") as f:
+            for url in urls:
                 f.write(url)
 
     return downloads
