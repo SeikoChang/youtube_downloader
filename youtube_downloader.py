@@ -509,7 +509,7 @@ def str2bool(v):
 def is_channel(string):
     # example, https://www.youtube.com/channel/UCFdTiwvDjyc62DBWrlYDtlQs
     try:
-        regex_search(r"(channel/)([0-9A-Za-z_-]{25}).*", string, group=1)
+        regex_search(r"(channel/)([0-9A-Za-z_-]{24}).*", string, group=1)
         return True
     except:
         return False
@@ -713,6 +713,73 @@ def get_correct_yt(url, retry):
     return yt
 
 
+def get_videos_from_channel(url):
+    videos = list()
+
+    try:
+        channel_id: str = regex_search(
+            r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
+    except IndexError:  # assume that url is just the id
+        channel_id = url
+
+    channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
+    html = request.get(channel_url)
+
+    video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
+    videos = uniqueify(video_regex.findall(html))
+
+    videos = [f"https://www.youtube.com{video_id}" for video_id in videos]
+
+    return videos
+
+
+def get_correct_videos_from_channel(url, retry):
+    videos = list()
+    i = 0
+    while len(videos) == 0:
+        videos = get_videos_from_channel(url)
+
+        logger.info(i)
+        #logger.info(fib(i))
+        i+=1
+        if i > retry+100: break
+
+    logger.info('channel = {url}'.format(url=url))
+    logger.info('{videos} Videos found from channel'.format(videos=len(videos)))
+
+    return videos
+
+
+def get_videos_from_playlist(url):
+    videos = list()
+    playlist = Playlist(url)
+    title = playlist.title()
+    for video in playlist:
+        # video.streams.get_highest_resolution().download()
+        videos.append(video)
+
+    return videos, title
+
+
+def get_correct_videos_from_playlist(url, retry):
+    videos = list()
+    title = None
+    i = 0
+    while len(videos) == 0 or title == None:
+        videos, title = get_videos_from_playlist(url)
+
+        logger.info(i)
+        #logger.info(fib(i))
+        i+=1
+        if i > retry+100: break
+
+    logger.info('Playlist = {url}'.format(url=url))
+    logger.info('Title = {title}'.format(title=title))
+    logger.info('{videos} Videos found from playlist'.format(videos=len(videos)))
+
+    return uniqueify(videos)
+
+
 def _download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retry=10):
     """Start downloading a YouTube video.
     :param str url:
@@ -855,21 +922,10 @@ def query_captions_codes(yt):
 def get_url_list(args):
     downloads = list()
     if args.url:
-        if args.itag:
-            downloads.append(args.url)
+        downloads.append(args.url)
     elif args.playlist:
-        for i in range(1, retry+1):
-            playlist = Playlist(item)
-            if len(playlist) > 0:
-                break
-            else:
-                time.sleep(fib(i))
-        title = playlist.title()
-        logger.debug("[%s]" % title)
-        playlist = Playlist(args.playlist)
-        for video in playlist:
-            # video.streams.get_highest_resolution().download()
-            downloads.append(video)
+        videos = get_correct_videos_from_playlist(args.playlist, args.retry)
+        downloads = videos
     elif args.file and os.path.exists(args.file):
         downloads = get_url_list_from_file(args.file, args.retry)
 
@@ -899,7 +955,7 @@ def get_url_list_from_file(file, retry):
         urls = uniqueify(urls)
         with open(file, "w") as f:
             for url in urls:
-                f.write(url)
+                f.write(url + '\n')
 
     return downloads
 
@@ -909,24 +965,12 @@ def get_url_by_item(item, retry):
 
     if is_channel(item):
         logger.debug("[%s] is_channel" % item)
-        videos = get_video_from_channel(item)
-        downloads.append(videos)
+        videos = get_correct_videos_from_channel(item, retry)
+        downloads += videos
     elif is_playList(item):
         logger.debug("[%s] is_playList" % item)
-        playlist = list()
-        i = 0
-        while len(playlist) == 0:
-            logger.info(len(playlist))
-            playlist = Playlist(item)
-            logger.info(i)
-            #logger.info(fib(i))
-            i+=1
-            if i > retry+100: break
-
-        title = playlist.title()
-        logger.debug("[%s]" % title)
-        for video in playlist:
-            downloads.append(video + '\n')
+        videos = get_correct_videos_from_playlist(item, retry)
+        downloads += videos
     elif is_watchUrl(item):
         logger.debug("[%s] is_watchUrl" % item)
         downloads.append(item)
@@ -1125,24 +1169,6 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
             "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(urls)))
 
     return True
-
-
-def get_video_from_channel(url):
-    videos = list()
-
-    try:
-        channel_id: str = regex_search(
-            r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
-    except IndexError:  # assume that url is just the id
-        channel_id = url
-
-    channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
-    html = request.get(channel_url)
-
-    video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
-    videos = uniqueify(video_regex.findall(html))
-
-    return videos
 
 
 def ffmpeg_join_audio_video(youtube: YouTube, resolution: str, target: str = None, ffmpeg: str = None) -> None:
