@@ -729,7 +729,7 @@ def get_videos_from_channel(url):
     video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
     videos = uniqueify(video_regex.findall(html))
 
-    videos = [f"https://www.youtube.com{video_id}" for video_id in videos]
+    videos = [f"https://www.youtube.com{video_id}\n" for video_id in videos]
 
     return videos
 
@@ -757,7 +757,7 @@ def get_videos_from_playlist(url):
     title = playlist.title()
     for video in playlist:
         # video.streams.get_highest_resolution().download()
-        videos.append(video)
+        videos.append(f"{video}\n")
 
     return videos, title
 
