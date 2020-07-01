@@ -688,7 +688,8 @@ def get_correct_yt(url, retry):
     else:
         proxy_params = None
 
-    for _ in range(1, retry+100+1):
+    for i in range(1, retry+100+1):
+        logger.debug(f"{i} retry in get_correct_yt()")
         try:
             filename = None
             #while filename in [None, "YouTube"]:
