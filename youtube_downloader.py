@@ -688,7 +688,7 @@ def get_correct_yt(url, retry):
     else:
         proxy_params = None
 
-    for i in range(1, retry+100+1):
+    for _ in range(1, retry+100+1):
         try:
             filename = None
             #while filename in [None, "YouTube"]:
@@ -919,21 +919,6 @@ def query_captions_codes(yt):
     return codes
 
 
-def get_url_list(args):
-    downloads = list()
-    if args.url:
-        downloads.append(args.url)
-    elif args.playlist:
-        videos = get_correct_videos_from_playlist(args.playlist, args.retry)
-        downloads = videos
-    elif args.file and os.path.exists(args.file):
-        downloads = get_url_list_from_file(args.file, args.retry)
-
-    logger.debug('All required download URLs = %s' % downloads)
-
-    return downloads
-
-
 def get_url_list_from_file(file, retry):
     file = file or defaultIni
     downloads = list()
@@ -956,6 +941,20 @@ def get_url_list_from_file(file, retry):
         with open(file, "w") as f:
             for url in urls:
                 f.write(url + '\n')
+
+    return urls
+
+
+def get_url_list(args):
+    downloads = list()
+    if args.url:
+        downloads.append(args.url)
+    elif args.playlist:
+        downloads = get_correct_videos_from_playlist(args.playlist, args.retry)
+    elif args.file and os.path.exists(args.file):
+        downloads = get_url_list_from_file(args.file, args.retry)
+
+    logger.debug('All required download URLs = %s' % downloads)
 
     return downloads
 
@@ -1147,7 +1146,7 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                     elif convert:
                         ffmpeg_aac_convert_mp3(aac=audio_path, target=target)
 
-                if os.path.exists(file) and (not listkeep):
+                if file and os.path.exists(file) and (not listkeep):
                     remove_item_in_file(file, item=url)
 
             # break retry level here
