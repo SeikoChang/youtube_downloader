@@ -885,7 +885,12 @@ def get_url_list_from_file(file, retry):
         with open(file, "r") as fp:
             for line in fp:
                 downloads.append(line)
-            uniqueify(downloads)
+
+        downloads = uniqueify(downloads)
+        with open(file, "w") as f:
+            for url in downloads:
+                f.write(url)
+
             for url in downloads:
                 urls += get_url_by_item(url, retry)
 
