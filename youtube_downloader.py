@@ -688,16 +688,18 @@ def get_correct_yt(url, retry):
     else:
         proxy_params = None
 
-    for i in range(1, retry+1):
+    for i in range(1, retry+100+1):
         try:
+            filename = None
+            #while filename in [None, "YouTube"]:
             yt = YouTube(
                 url, on_progress_callback=on_progress, proxies=proxy_params)
             filename = to_unicode(safe_filename(yt.title))
+            logger.debug("URL      = {url}".format(url=url))
             logger.debug("Filename = {filename}".format(filename=filename))
-            if 'YouTube' not in filename:
+            if filename != 'YouTube':
                 break
-            else:
-                time.sleep(fib(i))
+
         except Exception as ex:
             logger.error('Unable to get FileName from = [%s]' % url)
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -891,8 +893,8 @@ def get_url_list_from_file(file, retry):
             for url in downloads:
                 f.write(url)
 
-            for url in downloads:
-                urls += get_url_by_item(url, retry)
+        for url in downloads:
+            urls += get_url_by_item(url, retry)
 
         urls = uniqueify(urls)
         with open(file, "w") as f:
@@ -911,12 +913,16 @@ def get_url_by_item(item, retry):
         downloads.append(videos)
     elif is_playList(item):
         logger.debug("[%s] is_playList" % item)
-        for i in range(1, retry+1):
+        playlist = list()
+        i = 0
+        while len(playlist) == 0:
+            logger.info(len(playlist))
             playlist = Playlist(item)
-            if len(playlist) > 0:
-                break
-            else:
-                time.sleep(fib(i))
+            logger.info(i)
+            #logger.info(fib(i))
+            i+=1
+            if i > retry+100: break
+
         title = playlist.title()
         logger.debug("[%s]" % title)
         for video in playlist:
