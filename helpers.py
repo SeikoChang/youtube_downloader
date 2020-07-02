@@ -291,13 +291,13 @@ def download_ffmpeg(out=os.getcwd()):
 
 
 def ffmpeg_join_audio_video(video_path: str, audio_path: str, target: str = None, ffmpeg: str = None, skip: bool = True) -> str:
+    final_path = None
     target = target or os.getcwd()
     ffmpeg = ffmpeg or "ffmpeg"
 
-    base = os.path.basename(video_path)
-    name, ext = os.path.splitext(base)
-
-    if all([video_path, os.path.exists(video_path), audio_path, os.path.exists(audio_path)]):
+    if video_path and os.path.exists(video_path) and audio_path and os.path.exists(audio_path):
+        base = os.path.basename(video_path)
+        name, ext = os.path.splitext(base)
         filename = to_unicode(safe_filename(name))
         final_path = os.path.join(
             target, f"{filename}_HQ.{ext}"
@@ -318,10 +318,9 @@ def ffmpeg_aac_convert_mp3(aac: str, sampling: str = None, abr: str = None, targ
     target = target or os.getcwd()
     ffmpeg = ffmpeg or "ffmpeg"
 
-    base = os.path.basename(aac)
-    name, _ = os.path.splitext(base)
-
-    if os.path.exists(aac):
+    if aac and os.path.exists(aac):
+        base = os.path.basename(aac)
+        name, _ = os.path.splitext(base)
         final_path = os.path.join(
             target, f"{name}.mp3"
         )
