@@ -24,7 +24,6 @@ import ntpath
 import re
 import operator
 import platform
-from download_file import download_file as download_file
 import zipfile
 import contextlib
 import lzma
@@ -40,6 +39,25 @@ from pytube.helpers import regex_search
 from pytube import cli
 from pytube.helpers import cache, deprecated, install_proxy, uniqueify
 from pytube.helpers import safe_filename
+
+from download_file import download_file as download_file
+from helpers import get_terminal_size_windows
+from helpers import get_terminal_size_stty
+from helpers import get_terminal_size_tput
+from helpers import get_terminal_size
+from helpers import detect_platform
+from helpers import fib
+from helpers import symlink
+from helpers import copyfile
+from helpers import median
+from helpers import unzip_without_overwrite
+from helpers import filename_fix_existing
+from helpers import to_unicode
+from helpers import str2bool
+from helpers import download_ffmpeg
+from helpers import ffmpeg_join_audio_video
+from helpers import ffmpeg_aac_convert_mp3
+
 
 PY3K = sys.version_info >= (3, 0)
 if PY3K:
@@ -294,218 +312,6 @@ def loglevel_converter(loglevel):
     return numeric_level
 
 
-def detect_platform():
-    is_64bit = platform.machine().endswith('64')
-    arch = '64bit' if is_64bit else '32bit'
-    logger.info(platform.system())
-    logger.info(platform.release())
-    logger.info(platform.version())
-    logger.info(arch)
-
-    # logger.info("Your system is %s %s" % (platform.system(), arch))
-    if platform.system().lower() == "windows":
-        logger.info("Your system is windows %s" % arch)
-    elif platform.system().lower() == "linux":
-        logger.info("Your system is Linux %s" % arch)
-        logger.info(platform.linux_distribution)
-    elif platform.system().lower() == "darwin":
-        logger.info("Your system is MacOS %s" % arch)
-        logger.info(platform.mac_ver)
-    else:
-        logger.info("Unidentified system")
-
-    return platform.system(), arch
-
-
-def unzip_without_overwrite(src_path, dst_dir, pwd=None):
-    with zipfile.ZipFile(src_path) as zf:
-        members = zf.namelist()
-        for member in members:
-            arch_info = zf.getinfo(member)
-            arch_name = arch_info.filename.replace('/', os.path.sep)
-            dst_path = os.path.join(dst_dir, arch_name)
-            dst_path = os.path.normpath(dst_path)
-            if not os.path.exists(dst_path):
-                zf.extract(arch_info, dst_dir, pwd)
-
-
-def download_ffmpeg(out=os.getcwd()):
-    platform, arch = detect_platform()
-    if platform.lower() == "windows":
-        if arch.lower() == '32bit':
-            ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-latest-win32-static.zip"
-        elif arch.lower() == '64bit':
-            ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip"
-        ffmpeg = download_file(url=ffmpeg_url, out=out)
-        logger.info("%s downloaded" % ffmpeg)
-        #unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
-        with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
-            #zip_ref.extractall(out)
-            for file in zip_ref.filelist:
-                if not os.path.exists(file.filename):
-                    zip_ref.extract(file, out)
-                if file.filename.endswith("ffmpeg.exe") and (not file.is_dir()) and int(file.file_size) > 0:
-                    ffmpeg_binary = file.filename
-                    break
-
-    elif platform.lower() == "linux":
-        if arch.lower() == '32bit':
-            ffmpeg_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
-        elif arch.lower() == '64bit':
-            ffmpeg_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
-        ffmpeg = download_file(url=ffmpeg_url, out=out)
-        logger.info("%s downloaded" % ffmpeg)
-        with contextlib.closing(lzma.LZMAFile(ffmpeg)) as xz:
-            with tarfile.open(fileobj=xz) as f:
-                #f.extractall(out)
-                for member in f.members:
-                    if not os.path.exists(member.name):
-                        f.extractfile(member)
-                    if member.name.endswith('ffmpeg') and int(member.size) > 0 and int(member.mode) == 493:
-                        ffmpeg_binary = member.name
-                        break
-
-    elif platform.lower() == "darwin":
-        ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/macos64/static/ffmpeg-latest-macos64-static.zip"
-        ffmpeg = download_file(url=ffmpeg_url, out=out)
-        logger.info("%s downloaded" % ffmpeg)
-        #unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
-        with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
-            #zip_ref.extractall(out)
-            for file in zip_ref.filelist:
-                if not os.path.exists(file.filename):
-                    zip_ref.extract(file, out)
-                if file.filename.endswith("ffmpeg") and (not file.is_dir()) and int(file.file_size) > 0:
-                    ffmpeg_binary = file.filename
-                    break
-
-    else:
-        ffmpeg_url = False
-        logger.error("Unsupported system")
-        return False
-
-    filesize = os.path.getsize(ffmpeg_binary)
-    logger.info("ffmpeg location on [{path}], size = [{size}]".format(
-        path=ffmpeg_binary, size=filesize))
-
-    return ffmpeg_binary
-
-
-def fib(n):
-    if n == 0: return 0
-    elif n == 1: return 1
-    else: return fib(n-1)+fib(n-2)
-
-
-def symlink(source, link_name):
-    os_symlink = getattr(os, "symlink", None)
-    try:
-        os_symlink(source, link_name)
-    except:
-        try:
-            import ctypes
-            csl = ctypes.windll.kernel32.CreateSymbolicLinkW
-            csl.argtypes = (ctypes.c_wchar_p,
-                            ctypes.c_wchar_p, ctypes.c_uint32)
-            csl.restype = ctypes.c_ubyte
-            flags = 1 if os.path.isdir(source) else 0
-            if csl(link_name, source, flags) == 0:
-                raise ctypes.WinError()
-        except:
-            try:
-                import win32file
-                win32file.CreateSymbolicLink(fileSrc, fileTarget, 1)
-            except:
-                print('unable to create symbolic link from [{src}] to [{dst}]'.format(
-                    src=source, dst=link_name))
-
-
-def copyfile(source, destination, skip=True):
-    if skip == True and os.path.isfile(source) and os.path.isfile(destination) and (os.path.getsize(source) == os.path.getsize(destination)):
-        pass
-    else:
-        shutil.copyfile(source, destination)
-
-    st = os.stat(source)
-    shutil.copymode(source, destination)
-    os.chown(destination, st[stat.ST_UID], st[stat.ST_GID])
-    # return True if skip == True and os.path.isfile(source) and os.path.isfile(destination) and (os.path.getsize(source) == os.path.getsize(destination)) else shutil.copyfile(source, destination)
-
-
-def median(lst):
-    # sortedLst = sorted(lst)
-    lstLen = len(lst)
-    index = (lstLen - 1) // 2
-
-    if (lstLen % 2):
-        return lst[index]
-    else:
-        return lst[index]
-
-
-def filename_fix_existing(filename):
-    """Expands name portion of filename with numeric ' (x)' suffix to
-    return filename that doesn't exist already.
-    """
-    head, tail = ntpath.split(filename)
-    base = os.path.basename(filename)
-    name, ext = os.path.splitext(base)
-
-    if not head:
-        head = u'.'
-
-    try:
-        name, ext = tail.rsplit('.', 1)
-    except:
-        # handle those filename without extention name
-        name = tail.rsplit(os.sep, 1)[0]
-        ext = None
-    names = [x for x in os.listdir(head) if x.startswith(name)]
-    if ext:
-        names = [x.rsplit('.', 1)[0] for x in names]
-    else:
-        names = [x.rsplit(os.sep, 1)[0] for x in names]
-    suffixes = [x.replace(name, '') for x in names]
-    # filter suffixes that match ' (x)' pattern
-    suffixes = [x[2:-1] for x in suffixes
-                if x.startswith('_(') and x.endswith(')')]
-    indexes = [int(x) for x in suffixes
-               if set(x) <= set('0123456789')]
-    idx = 1
-    if indexes:
-        idx += sorted(indexes)[-1]
-
-    if ext:
-        out = '{0}_({1}).{2}'.format(name, idx, ext)
-    else:
-        out = '{0}_({1})'.format(name, idx)
-    out = os.path.join(head, out)
-    return out
-
-
-def to_unicode(filename):
-    """:return: filename decoded from utf-8 to unicode"""
-    if PY3K:
-        # [ ] test this on Python 3 + (Windows, Linux)
-        # [ ] port filename_from_headers once this works
-        # [ ] add test to repository / Travis
-        return filename
-    else:
-        if isinstance(filename, unicode):
-            return filename
-        else:
-            return unicode(filename, 'utf-8')
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
 def is_channel(string):
     # example, https://www.youtube.com/channel/UCFdTiwvDjyc62DBWrlYDtlQs
     try:
@@ -583,45 +389,6 @@ def display_streams(url):
         logger.error('Unable to list all streams from Video = [%s]' % url)
 
     return streams
-
-
-def get_terminal_size_windows():
-    try:
-        from ctypes import windll, create_string_buffer
-        import struct
-        # stdin handle is -10
-        # stdout handle is -11
-        # stderr handle is -12
-        h = windll.kernel32.GetStdHandle(-12)
-        csbi = create_string_buffer(22)
-        res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
-        if res:
-            (bufx, bufy, curx, cury, wattr,
-             left, top, right, bottom,
-             maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
-            sizex = right - left + 1
-            sizey = bottom - top + 1
-            return sizex, sizey
-    except:
-        pass
-
-
-def get_terminal_size_stty():
-    try:
-        return map(int, subprocess.check_output(['stty', 'size']).split())
-    except:
-        pass
-
-
-def get_terminal_size_tput():
-    try:
-        return map(int, [subprocess.check_output(['tput', 'lines']), subprocess.check_output(['tput', 'rows'])])
-    except:
-        pass
-
-
-def get_terminal_size():
-    return get_terminal_size_windows() or get_terminal_size_stty() or get_terminal_size_tput() or (25, 80)
 
 
 def display_progress_bar(bytes_received, filesize, ch='█', scale=0.55):
@@ -874,6 +641,7 @@ def _download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retr
     logger.info('target local tmpfile  = [%s]' % tmpfile)
     tmppath, tmpbase = ntpath.split(tmpfile)
     tmpname, tmpext = os.path.splitext(tmpbase)
+    logger.debug(f'target local tmpfile name = [{tmpname}], ext = [{tmpext}]')
 
     try:
         stream.download(output_path=tmppath, filename=tmpname,
@@ -1022,7 +790,7 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     sorted_rank = sorted(rank.items(), key=operator.itemgetter(1))
     logger.debug(sorted_rank)
 
-    if quality.upper() == 'HIGH':
+    if quality.upper() == 'BEST':
         itags = [sorted_rank[-1][0]]
     elif quality.upper() == 'NORMAL':
         itags = [median(sorted_rank)[0]]
@@ -1059,10 +827,11 @@ def download_youtube_by_itag(yt, itag, target):
         filename = to_unicode(safe_filename(filename))
         logger.debug("Filename = {filename}".format(filename=filename))
 
+        yt.register_on_progress_callback(on_progress)
         filepath = yt.streams.get_by_itag(itag).download(
             output_path=target, filename=filename)
     except:
-        logger.error("Unable to download YT, url = [{url}], itag = [{itag}".format(
+        logger.error("Unable to download YT, url = [{url}], itag = [{itag}]".format(
             url=url, itag=itag))
 
     return filepath
@@ -1122,7 +891,7 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                         except:
                             logger.warning(
                                 "Unable to convert {filepath} to mp3 file".format(
-                                    filepath, filepath)
+                                    filepath=filepath)
                             )
 
                 end_itag = time.time()
@@ -1139,13 +908,23 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
             else:
                 # join video/audio if required
                 if join:
-                    video_path, audio_path, _ = ffmpeg_join_audio_video(
-                        yt, "best", target, ffmpeg_binary)
-                    if not filekeep:
-                        os.unlink(video_path)
-                        os.unlink(audio_path)
-                    elif convert:
-                        ffmpeg_aac_convert_mp3(aac=audio_path, target=target)
+                    video_itag = get_target_itags(yt=yt, quality='BEST', mode='VIDEO')
+                    video_path = download_youtube_by_itag(yt=yt, itag=video_itag[0], target=target)
+                    audio_itag = get_target_itags(yt=yt, quality='BEST', mode='AUDIO')
+                    audio_path = download_youtube_by_itag(yt=yt, itag=audio_itag[0], target=target)
+
+                    join_path = ffmpeg_join_audio_video(video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary)
+                    logger.info(join_path)
+                    logger.info("[{join_path}] Joint to HQ vidoe Successfully".format(join_path=join_path))
+
+                if convert:
+                    mp3 = ffmpeg_aac_convert_mp3(aac=audio_path, target=target, ffmpeg=ffmpeg_binary)
+                    logger.info(audio_path)
+                    logger.info("[{mp3}] Covert to mp3 Successfully".format(mp3=mp3))
+
+                if any([join, convert]) and not filekeep:
+                    os.unlink(video_path)
+                    os.unlink(audio_path)
 
                 if file and os.path.exists(file) and (not listkeep):
                     remove_item_in_file(file, item=url)
@@ -1169,96 +948,6 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
             "Download all Youtube Video/Audio, there are total URLs = {urls} to be processed".format(urls=len(urls)))
 
     return True
-
-
-def ffmpeg_join_audio_video(youtube: YouTube, resolution: str, target: str = None, ffmpeg: str = None) -> None:
-    """
-    Decides the correct video stream to download, then calls _ffmpeg_downloader.
-
-    :param YouTube youtube:
-        A valid YouTube object.
-    :param str resolution:
-        YouTube video resolution.
-    :param str target:
-        Target directory for download
-    """
-    youtube.register_on_progress_callback(on_progress)
-    target = target or os.getcwd()
-    ffmpeg = ffmpeg or "ffmpeg"
-
-    if resolution == "best":
-        highest_quality_stream = (
-            youtube.streams.filter(progressive=False).order_by(
-                "resolution").last()
-        )
-        mp4_stream = (
-            youtube.streams.filter(progressive=False, subtype="mp4")
-            .order_by("resolution")
-            .last()
-        )
-        if highest_quality_stream.resolution == mp4_stream.resolution:
-            video_stream = mp4_stream
-        else:
-            video_stream = highest_quality_stream
-    else:
-        video_stream = youtube.streams.filter(
-            progressive=False, resolution=resolution, subtype="mp4"
-        ).first()
-        if not video_stream:
-            video_stream = youtube.streams.filter(
-                progressive=False, resolution=resolution
-            ).first()
-    if video_stream is None:
-        print(f"Could not find a stream with resolution: {resolution}")
-        print("Try one of these:")
-        display_streams(youtube)
-        sys.exit()
-
-    audio_stream = youtube.streams.get_audio_only(video_stream.subtype)
-    if not audio_stream:
-        audio_stream = youtube.streams.filter(
-            only_audio=True).order_by("abr").last()
-    if not audio_stream:
-        print("Could not find an audio only stream")
-        sys.exit()
-
-    video_path = audio_path = final_path = None
-    video_path = download_youtube_by_itag(
-        youtube, video_stream.itag, target)
-    audio_path = download_youtube_by_itag(
-        youtube, audio_stream.itag, target)
-    if all([video_path, audio_path]):
-        filename = to_unicode(safe_filename(youtube.title))
-        final_path = os.path.join(
-            target, f"{filename}_HQ.{video_stream.subtype}"
-        )
-        subprocess.run(  # nosec
-            [ffmpeg, "-i", video_path, "-i", audio_path,
-                "-codec", "copy", final_path, "-y", ]
-        )
-
-    return video_path, audio_path, final_path
-
-
-def ffmpeg_aac_convert_mp3(aac: str, sampling: str = None, abr: str = None, target: str = None, ffmpeg: str = None) -> None:
-    sampling = sampling or "44100"
-    abr = abr or "192k"
-    target = target or os.getcwd()
-    ffmpeg = ffmpeg or "ffmpeg"
-
-    base = os.path.basename(aac)
-    name, _ = os.path.splitext(base)
-
-    if os.path.exists(aac):
-        final_path = os.path.join(
-            target, f"{name}.mp3"
-        )
-        subprocess.run(  # nosec
-            [ffmpeg, "-i", aac, "-vn", "-ar",
-                sampling, "-ac", "2", "-b:a", abr, final_path, "-y", ]
-        )
-
-    return final_path
 
 
 def main():
@@ -1293,7 +982,7 @@ def main():
 
 def unitest():
     base = os.path.basename(__file__)
-    filename, file_extension = os.path.splitext(base)
+    filename, _ = os.path.splitext(base)
     test_file = '{name}.{ext}_unittest'.format(name=filename, ext='ini')
 
     # url = 'https://www.youtube.com/watch?v=F1fqet9V494'
