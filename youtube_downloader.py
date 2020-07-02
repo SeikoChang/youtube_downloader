@@ -769,7 +769,7 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     logger.debug("take = [{time}] secs".format(time=end_streams-start))
 
     rank = {
-        stream.itag: stream.filesize for stream in streams if isinstance(stream.filesize, int)}
+        stream.itag: stream.filesize_approx for stream in streams if isinstance(stream.filesize_approx, int)}
     end_rank = time.time()
     logger.debug("generate rank take = [{time}] secs".format(
         time=end_rank-start))
