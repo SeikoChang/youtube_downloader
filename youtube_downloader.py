@@ -26,11 +26,8 @@ import operator
 import platform
 import zipfile
 import contextlib
-import lzma
 import tarfile
 import stat
-
-from urllib.parse import parse_qs
 
 from pytube import __version__
 from pytube import request, YouTube
@@ -63,9 +60,12 @@ PY3K = sys.version_info >= (3, 0)
 if PY3K:
     import urllib.request as urllib2
     import urllib.parse as urlparse
+    from urllib.parse import parse_qs
 else:
     import urllib2
     import urlparse
+    from urlparse import parse_qs
+
 
 
 base = os.path.basename(__file__)
@@ -456,7 +456,7 @@ def get_correct_yt(url, retry):
         proxy_params = None
 
     for i in range(1, retry+100+1):
-        logger.debug(f"{i} retry in get_correct_yt()")
+        logger.debug("{i} retry in get_correct_yt()".format(i=i))
         try:
             filename = None
             #while filename in [None, "YouTube"]:
@@ -485,18 +485,18 @@ def get_videos_from_channel(url):
     videos = list()
 
     try:
-        channel_id: str = regex_search(
+        channel_id = regex_search(
             r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
     except IndexError:  # assume that url is just the id
         channel_id = url
 
-    channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
+    channel_url = "https://www.youtube.com/channel/{channel_id}/videos".format(channel_id=channel_id)
     html = request.get(channel_url)
 
     video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
     videos = uniqueify(video_regex.findall(html))
 
-    videos = [f"https://www.youtube.com{video_id}" for video_id in videos]
+    videos = ["https://www.youtube.com{video_id}".format(video_id=video_id) for video_id in videos]
 
     return videos
 
@@ -507,7 +507,7 @@ def get_correct_videos_from_channel(url, retry):
     while len(videos) == 0:
         videos = get_videos_from_channel(url)
 
-        logger.debug(f"{i} retry in get_correct_videos_from_channel()")
+        logger.debug("{i} retry in get_correct_videos_from_channel()".format(i=i))
         #logger.info(fib(i))
         i+=1
         if i > retry+100: break
@@ -524,7 +524,7 @@ def get_videos_from_playlist(url):
     title = playlist.title()
     for video in playlist:
         # video.streams.get_highest_resolution().download()
-        videos.append(f"{video}")
+        videos.append("{video}".format(video=video))
 
     return videos, title
 
@@ -536,7 +536,7 @@ def get_correct_videos_from_playlist(url, retry):
     while len(videos) == 0 or title == None:
         videos, title = get_videos_from_playlist(url)
 
-        logger.debug(f"{i} retry in get_correct_videos_from_playlist()")
+        logger.debug("{i} retry in get_correct_videos_from_playlist()".format(i=i))
         #logger.info(fib(i))
         i+=1
         if i > retry+100: break
@@ -641,7 +641,7 @@ def _download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retr
     logger.info('target local tmpfile  = [%s]' % tmpfile)
     tmppath, tmpbase = ntpath.split(tmpfile)
     tmpname, tmpext = os.path.splitext(tmpbase)
-    logger.debug(f'target local tmpfile name = [{tmpname}], ext = [{tmpext}]')
+    logger.debug('target local tmpfile name = [{tmpname}], ext = [{tmpext}]'.format(tmpname=tmpname, tmpext=tmpext))
 
     try:
         stream.download(output_path=tmppath, filename=tmpname,
@@ -701,7 +701,7 @@ def get_url_list_from_file(file, retry):
         downloads = uniqueify(downloads)
         with open(file, "w") as f:
             for url in downloads:
-                f.write(f"{url}\n")
+                f.write("{url}\n".format(url=url))
 
         for url in downloads:
             urls += get_url_by_item(url, retry)
@@ -709,7 +709,7 @@ def get_url_list_from_file(file, retry):
         urls = uniqueify(urls)
         with open(file, "w") as f:
             for url in urls:
-                f.write(f"{url}\n")
+                f.write("{url}\n".format(url=url))
 
     return urls
 
