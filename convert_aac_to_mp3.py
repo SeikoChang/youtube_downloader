@@ -19,6 +19,6 @@ for root, dirs, files in os.walk(target):
         filename, fileext = os.path.splitext(file)
         base = os.path.basename(file)
         name, ext = os.path.splitext(base)
-        if fileext not in ['mp3']:
+        if fileext not in ['mp3', 'srt']:
             mp3 = ffmpeg_aac_convert_mp3(aac=os.path.join(root, file), target=target, ffmpeg=ffmpeg_binary, skip=True)
 
