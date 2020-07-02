@@ -839,6 +839,7 @@ def download_youtube_by_itag(yt, itag, target):
 
 def download_youtube_by_url_list(file, urls, caption, quality, mode, target, join, filekeep, listkeep, convert, retry):
     file = file or defaultIni
+    keep = False
 
     if join or convert:
         ffmpeg_binary = download_ffmpeg()
@@ -913,20 +914,27 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                     audio_itag = get_target_itags(yt=yt, quality='BEST', mode='AUDIO')
                     audio_path = download_youtube_by_itag(yt=yt, itag=audio_itag[0], target=target)
 
-                    join_path = ffmpeg_join_audio_video(video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary)
-                    logger.info(join_path)
-                    logger.info("[{join_path}] Joint to HQ vidoe Successfully".format(join_path=join_path))
+                    join_path = ffmpeg_join_audio_video(video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
+                    if join_path:
+                        logger.info(join_path)
+                        logger.info("[{join_path}] Joint to HQ vidoe Successfully".format(join_path=join_path))
+                    else:
+                        logger.error("[{join_path}] Joint to HQ vidoe Failed".format(join_path=join_path))
 
                 if convert:
-                    mp3 = ffmpeg_aac_convert_mp3(aac=audio_path, target=target, ffmpeg=ffmpeg_binary)
-                    logger.info(audio_path)
-                    logger.info("[{mp3}] Covert to mp3 Successfully".format(mp3=mp3))
+                    mp3 = ffmpeg_aac_convert_mp3(aac=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
+                    if mp3:
+                        logger.info(audio_path)
+                        logger.info("[{mp3}] Covert to mp3 Successfully".format(mp3=mp3))
+                    else:
+                        logger.error("[{mp3}] Covert to mp3 Failed".format(mp3=mp3))
 
                 if any([join, convert]) and not filekeep:
                     os.unlink(video_path)
                     os.unlink(audio_path)
 
-                if file and os.path.exists(file) and (not listkeep):
+                keep = (join and (not join_path)) or (convert and (not mp3))
+                if (not keep) and (not listkeep):
                     remove_item_in_file(file, item=url)
 
             # break retry level here
