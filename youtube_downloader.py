@@ -441,7 +441,7 @@ def remove_item_in_file(file, item):
             lines = f.readlines()
         with open(file, "w") as f:
             for line in lines:
-                if line != item:
+                if line.strip('\n') != item:
                     f.write(line)
 
 
