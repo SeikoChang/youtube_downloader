@@ -290,7 +290,7 @@ def download_ffmpeg(out=os.getcwd()):
     return ffmpeg_binary
 
 
-def ffmpeg_join_audio_video(video_path: str, audio_path: str, target: str = None, ffmpeg: str = None) -> None:
+def ffmpeg_join_audio_video(video_path: str, audio_path: str, target: str = None, ffmpeg: str = None, skip: bool = True) -> str:
     target = target or os.getcwd()
     ffmpeg = ffmpeg or "ffmpeg"
 
@@ -302,15 +302,17 @@ def ffmpeg_join_audio_video(video_path: str, audio_path: str, target: str = None
         final_path = os.path.join(
             target, f"{filename}_HQ.{ext}"
         )
-        subprocess.run(  # nosec
-            [ffmpeg, "-i", video_path, "-i", audio_path,
-                "-codec", "copy", final_path, "-y", ]
-        )
+        if not all([os.path.exists(final_path), skip]):
+            subprocess.run(  # nosec
+                [ffmpeg, "-i", video_path, "-i", audio_path,
+                    "-codec", "copy", final_path, "-y", ]
+            )
 
     return final_path
 
 
-def ffmpeg_aac_convert_mp3(aac: str, sampling: str = None, abr: str = None, target: str = None, ffmpeg: str = None) -> None:
+def ffmpeg_aac_convert_mp3(aac: str, sampling: str = None, abr: str = None, target: str = None, ffmpeg: str = None, skip: bool = True) -> str:
+    final_path = None
     sampling = sampling or "44100"
     abr = abr or "192k"
     target = target or os.getcwd()
@@ -323,10 +325,11 @@ def ffmpeg_aac_convert_mp3(aac: str, sampling: str = None, abr: str = None, targ
         final_path = os.path.join(
             target, f"{name}.mp3"
         )
-        subprocess.run(  # nosec
-            [ffmpeg, "-i", aac, "-vn", "-ar",
-                sampling, "-ac", "2", "-b:a", abr, final_path, "-y", ]
-        )
+        if not all([os.path.exists(final_path), skip]):
+            subprocess.run(  # nosec
+                [ffmpeg, "-i", aac, "-vn", "-ar",
+                    sampling, "-ac", "2", "-b:a", abr, final_path, "-y", ]
+            )
 
     return final_path
 
