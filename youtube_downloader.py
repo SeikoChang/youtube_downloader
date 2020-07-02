@@ -729,7 +729,7 @@ def get_videos_from_channel(url):
     video_regex = re.compile(r"href=\"(/watch\?v=[\w-]*)")
     videos = uniqueify(video_regex.findall(html))
 
-    videos = [f"https://www.youtube.com{video_id}\n" for video_id in videos]
+    videos = [f"https://www.youtube.com{video_id}" for video_id in videos]
 
     return videos
 
@@ -757,7 +757,7 @@ def get_videos_from_playlist(url):
     title = playlist.title()
     for video in playlist:
         # video.streams.get_highest_resolution().download()
-        videos.append(f"{video}\n")
+        videos.append(f"{video}")
 
     return videos, title
 
@@ -928,12 +928,12 @@ def get_url_list_from_file(file, retry):
     if file and os.path.exists(file):
         with open(file, "r") as fp:
             for line in fp:
-                downloads.append(line)
+                downloads.append(line.strip('\n'))
 
         downloads = uniqueify(downloads)
         with open(file, "w") as f:
             for url in downloads:
-                f.write(url)
+                f.write(f"{url}\n")
 
         for url in downloads:
             urls += get_url_by_item(url, retry)
@@ -941,7 +941,7 @@ def get_url_list_from_file(file, retry):
         urls = uniqueify(urls)
         with open(file, "w") as f:
             for url in urls:
-                f.write(url)
+                f.write(f"{url}\n")
 
     return urls
 
