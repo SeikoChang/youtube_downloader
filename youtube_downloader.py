@@ -459,7 +459,7 @@ def get_correct_yt(url, retry):
         logger.debug(f"{i} retry in get_correct_yt()")
         try:
             filename = None
-            #while filename in [None, "YouTube"]:
+            # while filename in [None, "YouTube"]:
             yt = YouTube(
                 url, on_progress_callback=on_progress, proxies=proxy_params)
             filename = to_unicode(safe_filename(yt.title))
@@ -508,12 +508,14 @@ def get_correct_videos_from_channel(url, retry):
         videos = get_videos_from_channel(url)
 
         logger.debug(f"{i} retry in get_correct_videos_from_channel()")
-        #logger.info(fib(i))
-        i+=1
-        if i > retry+100: break
+        # logger.info(fib(i))
+        i += 1
+        if i > retry+100:
+            break
 
     logger.info('channel = {url}'.format(url=url))
-    logger.info('{videos} Videos found from channel'.format(videos=len(videos)))
+    logger.info('{videos} Videos found from channel'.format(
+        videos=len(videos)))
 
     return videos
 
@@ -537,13 +539,15 @@ def get_correct_videos_from_playlist(url, retry):
         videos, title = get_videos_from_playlist(url)
 
         logger.debug(f"{i} retry in get_correct_videos_from_playlist()")
-        #logger.info(fib(i))
-        i+=1
-        if i > retry+100: break
+        # logger.info(fib(i))
+        i += 1
+        if i > retry+100:
+            break
 
     logger.info('Playlist = {url}'.format(url=url))
     logger.info('Title = {title}'.format(title=title))
-    logger.info('{videos} Videos found from playlist'.format(videos=len(videos)))
+    logger.info('{videos} Videos found from playlist'.format(
+        videos=len(videos)))
 
     return uniqueify(videos)
 
@@ -909,25 +913,35 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
             else:
                 # join video/audio if required
                 if join:
-                    video_itag = get_target_itags(yt=yt, quality='BEST', mode='VIDEO')
-                    video_path = download_youtube_by_itag(yt=yt, itag=video_itag[0], target=target)
-                    audio_itag = get_target_itags(yt=yt, quality='BEST', mode='AUDIO')
-                    audio_path = download_youtube_by_itag(yt=yt, itag=audio_itag[0], target=target)
+                    video_itag = get_target_itags(
+                        yt=yt, quality='BEST', mode='VIDEO')
+                    video_path = download_youtube_by_itag(
+                        yt=yt, itag=video_itag[0], target=target)
+                    audio_itag = get_target_itags(
+                        yt=yt, quality='BEST', mode='AUDIO')
+                    audio_path = download_youtube_by_itag(
+                        yt=yt, itag=audio_itag[0], target=target)
 
-                    join_path = ffmpeg_join_audio_video(video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
+                    join_path = ffmpeg_join_audio_video(
+                        video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
                     if join_path:
                         logger.info(join_path)
-                        logger.info("[{join_path}] Joint to HQ vidoe Successfully".format(join_path=join_path))
+                        logger.info("[{join_path}] Joint to HQ video Successfully".format(
+                            join_path=join_path))
                     else:
-                        logger.error("[{join_path}] Joint to HQ vidoe Failed".format(join_path=join_path))
+                        logger.error("[{join_path}] Joint to HQ video Failed".format(
+                            join_path=join_path))
 
                 if convert:
-                    mp3 = ffmpeg_aac_convert_mp3(aac=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
+                    mp3 = ffmpeg_aac_convert_mp3(
+                        aac=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
                     if mp3:
                         logger.info(audio_path)
-                        logger.info("[{mp3}] Covert to mp3 Successfully".format(mp3=mp3))
+                        logger.info(
+                            "[{mp3}] Covert to mp3 Successfully".format(mp3=mp3))
                     else:
-                        logger.error("[{mp3}] Covert to mp3 Failed".format(mp3=mp3))
+                        logger.error(
+                            "[{mp3}] Covert to mp3 Failed".format(mp3=mp3))
 
                 if any([join, convert]) and not filekeep:
                     os.unlink(video_path)
