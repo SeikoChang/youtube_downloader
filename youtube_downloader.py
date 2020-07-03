@@ -795,7 +795,23 @@ def get_target_itags(yt, quality='NORMAL', mode='VIDEO_AUDIO'):
     logger.debug(sorted_rank)
 
     if quality.upper() == 'BEST':
-        itags = [sorted_rank[-1][0]]
+        if mode.upper() == 'VIDEO':
+            highest_quality_stream = (
+                yt.streams.filter(progressive=False).order_by(
+                    "resolution").last()
+            )
+            mp4_stream = (
+                yt.streams.filter(progressive=False, subtype="mp4")
+                .order_by("resolution")
+                .last()
+            )
+            if highest_quality_stream.resolution == mp4_stream.resolution:
+                video_stream = mp4_stream
+            else:
+                video_stream = highest_quality_stream
+            itags = [video_stream.itag]
+        else:
+            itags = [sorted_rank[-1][0]]
     elif quality.upper() == 'NORMAL':
         itags = [median(sorted_rank)[0]]
     elif quality.upper() == 'LOW':
