@@ -957,7 +957,7 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                             "[{mp3}] Convert to mp3 Successfully".format(mp3=mp3))
                     else:
                         logger.error(
-                            "[{mp3}] Covnert to mp3 Failed".format(mp3=mp3))
+                            "[{mp3}] Convert to mp3 Failed".format(mp3=mp3))
 
                 if any([join, convert]) and not filekeep:
                     os.unlink(video_path)
