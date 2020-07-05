@@ -300,13 +300,17 @@ def ffmpeg_join_audio_video(video_path: str, audio_path: str, target: str = None
         name, ext = os.path.splitext(base)
         filename = to_unicode(safe_filename(name))
         final_path = os.path.join(
-            target, f"{filename}_HQ.{ext}"
+            target, f"{filename}_HQ{ext}"
         )
         if not all([os.path.exists(final_path), skip]):
-            subprocess.run(  # nosec
-                [ffmpeg, "-i", video_path, "-i", audio_path,
+            if ext == '.webm':
+                cmd =  [ffmpeg, "-i", video_path, "-i", audio_path,
+                    "-c:v", "copy", "-c:a", "libvorbis", "-strict experimental", final_path, "-y", ]
+            else:
+                cmd = [ffmpeg, "-i", video_path, "-i", audio_path,
                     "-codec", "copy", final_path, "-y", ]
-            )
+
+            subprocess.run(cmd)
 
     return final_path
 
