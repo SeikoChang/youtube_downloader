@@ -455,7 +455,7 @@ def get_correct_yt(url, retry):
     else:
         proxy_params = None
 
-    for i in range(1, retry+100+1):
+    for i in range(1, retry):
         logger.debug(f"{i} retry in get_correct_yt()")
         try:
             filename = None
@@ -883,6 +883,7 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
             logger.info("Length = {length}".format(length=yt.length))
             logger.info("Thumbnail_url = {thumbnail_url}".format(
                 thumbnail_url=yt.thumbnail_url))
+            logger.info("Author = {author}".format(author=yt.author))
 
             get_captions(yt, caption)
 
@@ -908,7 +909,7 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                             mp3 = ffmpeg_aac_convert_mp3(
                                 aac=filepath, target=target)
                             logger.info(
-                                "Successfully {filepath} convert to {mp3}".format(filepath=filepath, mp3=mp3))
+                                "Successfully convert to {mp3} from {filepath}".format(filepath=filepath, mp3=mp3))
                         except:
                             logger.warning(
                                 "Unable to convert {filepath} to mp3 file".format(
@@ -928,43 +929,46 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
             # update items in ini file
             else:
                 # join video/audio if required
-                if join:
-                    video_itag = get_target_itags(
-                        yt=yt, quality='BEST', mode='VIDEO')
-                    video_path = download_youtube_by_itag(
-                        yt=yt, itag=video_itag[0], target=target)
+                join_path = mp3 = audio_path = video_path = None
+                if any([join, convert]):
                     audio_itag = get_target_itags(
                         yt=yt, quality='BEST', mode='AUDIO')
                     audio_path = download_youtube_by_itag(
                         yt=yt, itag=audio_itag[0], target=target)
 
-                    join_path = ffmpeg_join_audio_video(
-                        video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
-                    if join_path:
-                        logger.info(join_path)
-                        logger.info("[{join_path}] Joint to HQ video Successfully".format(
-                            join_path=join_path))
-                    else:
-                        logger.error("[{join_path}] Joint to HQ video Failed".format(
-                            join_path=join_path))
+                    if convert:
+                        mp3 = ffmpeg_aac_convert_mp3(
+                            aac=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
+                        if mp3:
+                            logger.info(audio_path)
+                            logger.info(
+                                "[{mp3}] Converted Successfully".format(mp3=mp3))
+                        else:
+                            logger.error(
+                                "[{mp3}] Converted Failed".format(mp3=mp3))
 
-                if convert:
-                    mp3 = ffmpeg_aac_convert_mp3(
-                        aac=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
-                    if mp3:
-                        logger.info(audio_path)
-                        logger.info(
-                            "[{mp3}] Convert to mp3 Successfully".format(mp3=mp3))
-                    else:
-                        logger.error(
-                            "[{mp3}] Convert to mp3 Failed".format(mp3=mp3))
+                    if join:
+                        video_itag = get_target_itags(
+                            yt=yt, quality='BEST', mode='VIDEO')
+                        video_path = download_youtube_by_itag(
+                            yt=yt, itag=video_itag[0], target=target)
 
-                if any([join, convert]) and not filekeep:
-                    os.unlink(video_path)
-                    os.unlink(audio_path)
+                        join_path = ffmpeg_join_audio_video(
+                            video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
+                        if join_path:
+                            logger.info(join_path)
+                            logger.info("[{join_path}] Joint to HQ video Successfully".format(
+                                join_path=join_path))
+                        else:
+                            logger.error("[{join_path}] Joint to HQ video Failed".format(
+                                join_path=join_path))
 
-                keep = (join and (not join_path)) or (convert and (not mp3))
-                if (not keep) and (not listkeep):
+                    if not filekeep:
+                        for path in [audio_path, video_path]:
+                            path and os.unlink(path)
+
+                existence = (join and join_path) or (convert and mp3)
+                if existence and not listkeep:
                     remove_item_in_file(file, item=url)
 
             # break retry level here
