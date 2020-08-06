@@ -4,6 +4,10 @@
 # chcp 65001       #转换为utf-8代码页
 # chcp 936           #转换为默认的gb
 
+from download_file import download_file
+from pytube import YouTube
+from pytube.helpers import uniqueify
+from pytube.helpers import safe_filename
 import sys
 import os
 import tempfile
@@ -26,14 +30,6 @@ if PY3K:
 else:
     import urllib2
     import urlparse
-
-
-from pytube.helpers import safe_filename
-from pytube.helpers import uniqueify
-from pytube import YouTube
-from pytube import YouTube
-
-from download_file import download_file
 
 
 logger = logging.getLogger(__name__)
@@ -102,9 +98,12 @@ def detect_platform():
 
 
 def fib(n):
-    if n == 0: return 0
-    elif n == 1: return 1
-    else: return fib(n-1)+fib(n-2)
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        return fib(n-1)+fib(n-2)
 
 
 def symlink(source, link_name):
@@ -239,7 +238,7 @@ def download_ffmpeg(out=os.getcwd()):
         logger.info("%s downloaded" % ffmpeg)
         #unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
         with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
-            #zip_ref.extractall(out)
+            # zip_ref.extractall(out)
             for file in zip_ref.filelist:
                 if not os.path.exists(file.filename):
                     zip_ref.extract(file, out)
@@ -256,7 +255,7 @@ def download_ffmpeg(out=os.getcwd()):
         logger.info("%s downloaded" % ffmpeg)
         with contextlib.closing(lzma.LZMAFile(ffmpeg)) as xz:
             with tarfile.open(fileobj=xz) as f:
-                #f.extractall(out)
+                # f.extractall(out)
                 for member in f.members:
                     if not os.path.exists(member.name):
                         f.extractfile(member)
@@ -270,7 +269,7 @@ def download_ffmpeg(out=os.getcwd()):
         logger.info("%s downloaded" % ffmpeg)
         #unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
         with zipfile.ZipFile(ffmpeg, 'r') as zip_ref:
-            #zip_ref.extractall(out)
+            # zip_ref.extractall(out)
             for file in zip_ref.filelist:
                 if not os.path.exists(file.filename):
                     zip_ref.extract(file, out)
@@ -303,12 +302,12 @@ def ffmpeg_join_audio_video(video_path: str, audio_path: str, target: str = None
             target, f"{filename}_HQ{ext}"
         )
         if not all([os.path.exists(final_path), skip]):
-            if ext == '.webm':
-                cmd =  [ffmpeg, "-i", video_path, "-i", audio_path,
-                    "-c:v", "copy", "-c:a", "libvorbis", "-strict experimental", final_path, "-y", ]
+            if ext.lower() == '.webm':
+                cmd = [ffmpeg, "-i", video_path, "-i", audio_path,
+                       "-c:v", "copy", "-c:a", "libvorbis", "-strict experimental", final_path, "-y", ]
             else:
                 cmd = [ffmpeg, "-i", video_path, "-i", audio_path,
-                    "-codec", "copy", final_path, "-y", ]
+                       "-codec", "copy", final_path, "-y", ]
 
             subprocess.run(cmd)
 
@@ -384,7 +383,7 @@ def ffmpeg_join_audio_video_ex(youtube: YouTube, resolution: str, target: str = 
     video_path = video_stream.download()
     audio_path = audio_stream.download()
 
-    final_path = ffmpeg_join_audio_video(video_path, audio_path, target, ffmpeg)
+    final_path = ffmpeg_join_audio_video(
+        video_path, audio_path, target, ffmpeg)
 
     return video_path, audio_path, final_path
-
