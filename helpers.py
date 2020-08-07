@@ -309,7 +309,7 @@ def ffmpeg_join_audio_video(video_path: str, audio_path: str, target: str = None
                 cmd = [ffmpeg, "-i", video_path, "-i", audio_path,
                        "-codec", "copy", final_path, "-y", ]
 
-            subprocess.run(cmd)
+            subprocess.call(cmd)
 
     return final_path
 
@@ -328,7 +328,7 @@ def ffmpeg_aac_convert_mp3(aac: str, sampling: str = None, abr: str = None, targ
             target, f"{name}.mp3"
         )
         if not all([os.path.exists(final_path), skip]):
-            subprocess.run(  # nosec
+            subprocess.call(  # nosec
                 [ffmpeg, "-i", aac, "-vn", "-ar",
                     sampling, "-ac", "2", "-b:a", abr, final_path, "-y", ]
             )

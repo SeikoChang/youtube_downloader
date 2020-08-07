@@ -907,7 +907,7 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                     if convert:
                         try:
                             mp3 = ffmpeg_aac_convert_mp3(
-                                aac=filepath, target=target)
+                                aac=filepath, target=target, ffmpeg=ffmpeg_binary, skip=True)
                             logger.info(
                                 "Successfully convert to {mp3} from {filepath}".format(filepath=filepath, mp3=mp3))
                         except:
@@ -937,13 +937,13 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                         yt=yt, itag=audio_itag[0], target=target)
 
                     if convert:
-                        mp3 = ffmpeg_aac_convert_mp3(
-                            aac=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
-                        if mp3:
-                            logger.info(audio_path)
+                        logger.info(audio_path)
+                        try:
+                            mp3 = ffmpeg_aac_convert_mp3(
+                                aac=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
                             logger.info(
                                 "[{mp3}] Converted Successfully".format(mp3=mp3))
-                        else:
+                        except:
                             logger.error(
                                 "[{mp3}] Converted Failed".format(mp3=mp3))
 
@@ -953,13 +953,13 @@ def download_youtube_by_url_list(file, urls, caption, quality, mode, target, joi
                         video_path = download_youtube_by_itag(
                             yt=yt, itag=video_itag[0], target=target)
 
-                        join_path = ffmpeg_join_audio_video(
-                            video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
-                        if join_path:
-                            logger.info(join_path)
+                        logger.info(join_path)
+                        try:
+                            join_path = ffmpeg_join_audio_video(
+                                video_path=video_path, audio_path=audio_path, target=target, ffmpeg=ffmpeg_binary, skip=True)
                             logger.info("[{join_path}] Joint to HQ video Successfully".format(
                                 join_path=join_path))
-                        else:
+                        except:
                             logger.error("[{join_path}] Joint to HQ video Failed".format(
                                 join_path=join_path))
 
