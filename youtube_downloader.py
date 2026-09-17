@@ -92,9 +92,7 @@ def get_arguments():
         nargs="?",
         const=False,
         default=False,
-        help=(
-            "identify if keep item in -f --file {file} after successfully download file"
-        ),
+        help=("identify if keep item in -f --file {file} after successfully download file"),
     )
 
     parser.add_argument(
@@ -140,9 +138,11 @@ def get_arguments():
         nargs="?",
         const=True,
         default=True,
-        help=("identify if replace the existed file with the same filename \
+        help=(
+            "identify if replace the existed file with the same filename \
             or download new file with prefix file name, \
-            this only be taken when skip = False"),
+            this only be taken when skip = False"
+        ),
     )
 
     parser.add_argument(
@@ -225,8 +225,10 @@ def get_arguments():
         "-cap",
         "--caption",
         action="store_false",
-        help=("download all available caption for all languages if available \
-             or download specific language caption only"),
+        help=(
+            "download all available caption for all languages if available \
+             or download specific language caption only"
+        ),
     )
 
     parser.add_argument(
@@ -297,9 +299,7 @@ def set_logger(logfile=None, verbosity="WARNING", quiet=False):
     LogLevel = loglevel_converter(verbosity)
     formatter = "%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s"
 
-    logging.basicConfig(
-        level=LogLevel, format=formatter, datefmt="%a %b %d %H:%M:%S CST %Y"
-    )
+    logging.basicConfig(level=LogLevel, format=formatter, datefmt="%a %b %d %H:%M:%S CST %Y")
 
     logger = logging.getLogger(__name__)
     logger.handlers = []
@@ -307,9 +307,7 @@ def set_logger(logfile=None, verbosity="WARNING", quiet=False):
 
     # new file handler
     if logfile:
-        handler = logging.FileHandler(
-            filename=logfile, mode="a+", encoding="utf-8", delay=True
-        )
+        handler = logging.FileHandler(filename=logfile, mode="a+", encoding="utf-8", delay=True)
         handler.setLevel(LogLevel)
         # set logging format
         formatter = logging.Formatter(formatter)
@@ -508,9 +506,7 @@ def get_videos_from_channel(url):
     videos = []
 
     try:
-        channel_id: str = regex_search(
-            r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1
-        )
+        channel_id: str = regex_search(r"(?:channel|\/)([0-9A-Za-z_-]{24}).*", url, group=1)
     except IndexError:  # assume that url is just the id
         channel_id = url
 
@@ -600,9 +596,7 @@ def _download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retr
     length = (yt.length,)
     thumbnail_url = yt.thumbnail_url
 
-    logger.info(
-        f"\n{title} |\n{description} |\n\n{views} views | {rating} rating | {length} secs"
-    )
+    logger.info(f"\n{title} |\n{description} |\n\n{views} views | {rating} rating | {length} secs")
 
     print(f"\n{filename} | {filesize} bytes")
 
@@ -624,9 +618,7 @@ def _download(yt, itag=18, out=None, replace=True, skip=True, proxies=None, retr
     # add numeric ' (x)' suffix if filename already exists
     if os.path.exists(filename):
         fsize = os.path.getsize(filename)
-        logger.info(
-            f"filename = [{filename}] filesize = [{fsize}] already exists in system"
-        )
+        logger.info(f"filename = [{filename}] filesize = [{fsize}] already exists in system")
         if fsize == filesize:
             if skip:
                 logger.info(
@@ -696,9 +688,7 @@ def get_captions(yt, lang):
                     filepath = yt.captions[code].download(
                         title=filename, srt=True, output_path=args.target
                     )
-                    logger.info(
-                        f"captions language code = [{code}] downloaded [{filepath}]"
-                    )
+                    logger.info(f"captions language code = [{code}] downloaded [{filepath}]")
                 except Exception:  # noqa: BLE001
                     logger.error(f"unable to download caption code = [{code}")
 
@@ -785,9 +775,7 @@ def get_target_itags(yt, quality="NORMAL", mode="VIDEO_AUDIO"):
     elif mode.upper() == "VIDEO":
         streams = yt.streams.filter(only_video=True).order_by("resolution").desc()
     elif mode.upper() == "AUDIO":
-        streams = (
-            yt.streams.filter(only_audio=True, subtype="mp4").order_by("abr").desc()
-        )
+        streams = yt.streams.filter(only_audio=True, subtype="mp4").order_by("abr").desc()
     elif mode.upper() == "ALL":
         streams = yt.streams
     else:
@@ -826,9 +814,7 @@ def get_target_itags(yt, quality="NORMAL", mode="VIDEO_AUDIO"):
                 yt.streams.filter(progressive=False).order_by("resolution").last()
             )
             mp4_stream = (
-                yt.streams.filter(progressive=False, subtype="mp4")
-                .order_by("resolution")
-                .last()
+                yt.streams.filter(progressive=False, subtype="mp4").order_by("resolution").last()
             )
             if highest_quality_stream.resolution == mp4_stream.resolution:
                 video_stream = mp4_stream
@@ -866,14 +852,14 @@ def download_youtube_by_itag(yt, itag, target):
         fps = stream.fps
         bitrate = stream.bitrate
         filesize = stream.filesize
-        filename = f"{title}_{resolution}_{video_codec}_{abr}_{audio_codec}_{fps}_{bitrate}_{filesize}"
+        filename = (
+            f"{title}_{resolution}_{video_codec}_{abr}_{audio_codec}_{fps}_{bitrate}_{filesize}"
+        )
         filename = to_unicode(safe_filename(filename))
         logger.debug(f"Filename = {filename}")
 
         yt.register_on_progress_callback(on_progress)
-        filepath = yt.streams.get_by_itag(itag).download(
-            output_path=target, filename=filename
-        )
+        filepath = yt.streams.get_by_itag(itag).download(output_path=target, filename=filename)
     except Exception:  # noqa: BLE001
         logger.error(f"Unable to download YT, url = [{url}], itag = [{itag}]")
 
@@ -930,22 +916,16 @@ def download_youtube_by_url_list(
                                 ffmpeg=ffmpeg_binary,
                                 skip=True,
                             )
-                            logger.info(
-                                f"Successfully convert to {mp3} from {filepath}"
-                            )
+                            logger.info(f"Successfully convert to {mp3} from {filepath}")
                         except Exception:  # noqa: BLE001
                             logger.warning(f"Unable to convert {filepath} to mp3 file")
 
                 end_itag = time.time()
                 duration = end_itag - start_itag
                 logger.debug(f"URL = [{url}] processing finished")
-                logger.debug(
-                    f"Execution in [{duration}] seconds with filesize [{stream.filesize}]"
-                )
+                logger.debug(f"Execution in [{duration}] seconds with filesize [{stream.filesize}]")
 
-                logger.debug(
-                    f"Average speed = [{stream.filesize / 8 / 1024 / duration} Mbps]"
-                )
+                logger.debug(f"Average speed = [{stream.filesize / 8 / 1024 / duration} Mbps]")
 
             # update items in ini file
             else:
@@ -953,9 +933,7 @@ def download_youtube_by_url_list(
                 join_path = mp3 = audio_path = video_path = None
                 if any([join, convert]):
                     audio_itag = get_target_itags(yt=yt, quality="BEST", mode="AUDIO")
-                    audio_path = download_youtube_by_itag(
-                        yt=yt, itag=audio_itag[0], target=target
-                    )
+                    audio_path = download_youtube_by_itag(yt=yt, itag=audio_itag[0], target=target)
 
                     if convert:
                         logger.info(audio_path)
@@ -971,9 +949,7 @@ def download_youtube_by_url_list(
                             logger.error(f"[{mp3}] Converted Failed")
 
                     if join:
-                        video_itag = get_target_itags(
-                            yt=yt, quality="BEST", mode="VIDEO"
-                        )
+                        video_itag = get_target_itags(yt=yt, quality="BEST", mode="VIDEO")
                         video_path = download_youtube_by_itag(
                             yt=yt, itag=video_itag[0], target=target
                         )
@@ -1022,9 +998,7 @@ def download_youtube_by_url_list(
 def main():
     start = time.time()
     """Command line application to download youtube videos."""
-    logger = set_logger(
-        logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet
-    )
+    logger = set_logger(logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet)
     logger.debug(f"System out encoding = [{sys.stdout.encoding}]")
 
     if not (args.url or args.playlist or os.path.exists(args.file)):
@@ -1067,9 +1041,7 @@ def unitest():
 
     # url = 'https://www.youtube.com/watch?v=F1fqet9V494'
     url = "https://www.youtube.com/watch?v=xwsYvBYZcx4"
-    playlist = (
-        "https://www.youtube.com/playlist?list=PLteWjpkbvj7rUU5SFt2BlNVCQqkjulPZR"
-    )
+    playlist = "https://www.youtube.com/playlist?list=PLteWjpkbvj7rUU5SFt2BlNVCQqkjulPZR"
 
     def test1():
         logger.info(f"Testing with 'display_streams()' for url =  {url}")

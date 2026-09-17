@@ -41,8 +41,8 @@ def get_terminal_size_windows():
         csbi = create_string_buffer(22)
         res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
         if res:
-            bufx, bufy, curx, cury, wattr, left, top, right, bottom, maxx, maxy = (
-                struct.unpack("hhhhHhhhhhh", csbi.raw)
+            bufx, bufy, curx, cury, wattr, left, top, right, bottom, maxx, maxy = struct.unpack(
+                "hhhhHhhhhhh", csbi.raw
             )
             sizex = right - left + 1
             sizey = bottom - top + 1
@@ -244,9 +244,13 @@ def download_ffmpeg(out=os.getcwd()):
     platform, arch = detect_platform()
     if platform.lower() == "windows":
         if arch.lower() == "32bit":
-            ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-latest-win32-static.zip"
+            ffmpeg_url = (
+                "https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-latest-win32-static.zip"
+            )
         elif arch.lower() == "64bit":
-            ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip"
+            ffmpeg_url = (
+                "https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip"
+            )
         ffmpeg = download_file(url=ffmpeg_url, out=out)
         logger.info("%s downloaded" % ffmpeg)
         # unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
@@ -265,9 +269,13 @@ def download_ffmpeg(out=os.getcwd()):
 
     elif platform.lower() == "linux":
         if arch.lower() == "32bit":
-            ffmpeg_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+            ffmpeg_url = (
+                "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+            )
         elif arch.lower() == "64bit":
-            ffmpeg_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+            ffmpeg_url = (
+                "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+            )
         ffmpeg = download_file(url=ffmpeg_url, out=out)
         logger.info("%s downloaded" % ffmpeg)
         with contextlib.closing(lzma.LZMAFile(ffmpeg)) as xz:
@@ -285,7 +293,9 @@ def download_ffmpeg(out=os.getcwd()):
                         break
 
     elif platform.lower() == "darwin":
-        ffmpeg_url = "https://ffmpeg.zeranoe.com/builds/macos64/static/ffmpeg-latest-macos64-static.zip"
+        ffmpeg_url = (
+            "https://ffmpeg.zeranoe.com/builds/macos64/static/ffmpeg-latest-macos64-static.zip"
+        )
         ffmpeg = download_file(url=ffmpeg_url, out=out)
         logger.info("%s downloaded" % ffmpeg)
         # unzip_without_overwrite(src_path=ffmpeg, dst_dir=out)
@@ -309,9 +319,7 @@ def download_ffmpeg(out=os.getcwd()):
 
     filesize = os.path.getsize(ffmpeg_binary)
     logger.info(
-        "ffmpeg location on [{path}], size = [{size}]".format(
-            path=ffmpeg_binary, size=filesize
-        )
+        "ffmpeg location on [{path}], size = [{size}]".format(path=ffmpeg_binary, size=filesize)
     )
 
     return ffmpeg_binary
@@ -328,12 +336,7 @@ def ffmpeg_join_audio_video(
     target = target or os.getcwd()
     ffmpeg = ffmpeg or "ffmpeg"
 
-    if (
-        video_path
-        and os.path.exists(video_path)
-        and audio_path
-        and os.path.exists(audio_path)
-    ):
+    if video_path and os.path.exists(video_path) and audio_path and os.path.exists(audio_path):
         base = os.path.basename(video_path)
         name, ext = os.path.splitext(base)
         filename = to_unicode(safe_filename(name))
@@ -434,9 +437,7 @@ def ffmpeg_join_audio_video_ex(
             youtube.streams.filter(progressive=False).order_by("resolution").last()
         )
         mp4_stream = (
-            youtube.streams.filter(progressive=False, subtype="mp4")
-            .order_by("resolution")
-            .last()
+            youtube.streams.filter(progressive=False, subtype="mp4").order_by("resolution").last()
         )
         if highest_quality_stream.resolution == mp4_stream.resolution:
             video_stream = mp4_stream
@@ -447,9 +448,7 @@ def ffmpeg_join_audio_video_ex(
             progressive=False, resolution=resolution, subtype="mp4"
         ).first()
         if not video_stream:
-            video_stream = youtube.streams.filter(
-                progressive=False, resolution=resolution
-            ).first()
+            video_stream = youtube.streams.filter(progressive=False, resolution=resolution).first()
 
     audio_stream = youtube.streams.get_audio_only(video_stream.subtype)
     if not audio_stream:

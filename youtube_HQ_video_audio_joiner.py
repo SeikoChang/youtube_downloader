@@ -17,9 +17,7 @@ def set_logger(logfile=None, verbosity="WARNING", quiet=False):
     LogLevel = youtube_downloader.loglevel_converter(verbosity)
     formatter = "%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s"
 
-    logging.basicConfig(
-        level=LogLevel, format=formatter, datefmt="%a %b %d %H:%M:%S CST %Y"
-    )
+    logging.basicConfig(level=LogLevel, format=formatter, datefmt="%a %b %d %H:%M:%S CST %Y")
 
     logger = logging.getLogger(__name__)
     logger.handlers = []
@@ -27,9 +25,7 @@ def set_logger(logfile=None, verbosity="WARNING", quiet=False):
 
     # new file handler
     if logfile:
-        handler = logging.FileHandler(
-            filename=logfile, mode="a+", encoding="utf-8", delay=True
-        )
+        handler = logging.FileHandler(filename=logfile, mode="a+", encoding="utf-8", delay=True)
         handler.setLevel(LogLevel)
         # set logging format
         formatter = logging.Formatter(formatter)
@@ -55,13 +51,9 @@ def get_best_audio_video_from_youtube(url, retry=3):
     video = audio = None
     for i in range(1, 1 + retry):
         try:
-            itags = youtube_downloader.get_target_itags(
-                url=url, quality="HIGH", mode="VIDEO"
-            )
+            itags = youtube_downloader.get_target_itags(url=url, quality="HIGH", mode="VIDEO")
             logger.info("Get Best Video itags = [%s]" % itags[0])
-            video = youtube_downloader.download(
-                url=url, itag=itags[0], replace=True, skip=True
-            )
+            video = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
             video = youtube_downloader.to_unicode(video)
             # shutil.move(video, u'{}.video'.format(video))
             # video = u'{}.video'.format(video)
@@ -69,21 +61,16 @@ def get_best_audio_video_from_youtube(url, retry=3):
             if os.path.exists(video):
                 filesize = os.path.getsize(video)
                 logger.info(
-                    "Best Video = [%s] Size = [%s] Downloaded Successfully"
-                    % (video, filesize)
+                    "Best Video = [%s] Size = [%s] Downloaded Successfully" % (video, filesize)
                 )
         except Exception:
             logger.exception("Generic Exception: " + traceback.format_exc())
             logger.error("Downloaded Failed - Best Video = %s" % (url))
 
         try:
-            itags = youtube_downloader.get_target_itags(
-                url=url, quality="HIGH", mode="AUDIO"
-            )
+            itags = youtube_downloader.get_target_itags(url=url, quality="HIGH", mode="AUDIO")
             logger.info("Get Best Audio itags = [%s]" % itags[0])
-            audio = youtube_downloader.download(
-                url=url, itag=itags[0], replace=True, skip=True
-            )
+            audio = youtube_downloader.download(url=url, itag=itags[0], replace=True, skip=True)
             audio = youtube_downloader.to_unicode(audio)
             # shutil.move(audio, u'{}.audio'.format(audio))
             # audio = u'{}.audio'.format(audio)
@@ -91,8 +78,7 @@ def get_best_audio_video_from_youtube(url, retry=3):
             if os.path.exists(audio):
                 filesize = os.path.getsize(audio)
                 logger.info(
-                    "Best Audio = [%s] Size = [%s] Downloaded Successfully"
-                    % (audio, filesize)
+                    "Best Audio = [%s] Size = [%s] Downloaded Successfully" % (audio, filesize)
                 )
             logger.error("Downloaded Failed - Best Audio = %s" % (url))
         except Exception:
@@ -274,9 +260,7 @@ def unitest():
 
 def main():
     """Command line application to download and join youtube HQ video and audio."""
-    logger = set_logger(
-        logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet
-    )
+    logger = set_logger(logfile=args.logfile, verbosity=args.verbosity, quiet=args.quiet)
     logger.debug("System out encoding = [%s]" % sys.stdout.encoding)
 
     if not (args.url or os.path.exists(args.file)):
@@ -305,9 +289,7 @@ def main():
                             keep=args.keep,
                             replace=args.replace,
                         ):
-                            logger.info(
-                                f"Best video and audio joined successfully for url = {url}"
-                            )
+                            logger.info(f"Best video and audio joined successfully for url = {url}")
                             if args.file and (not args.listkeep):
                                 with open(args.file, "r") as f:
                                     lines = f.readlines()

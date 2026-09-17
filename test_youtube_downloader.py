@@ -63,9 +63,7 @@ if __name__ == "__main__":
     file = "{name}.{ext}_unittest".format(name=filename, ext="ini")
     # url = 'https://www.youtube.com/watch?v=F1fqet9V494'
     url = "https://www.youtube.com/watch?v=xwsYvBYZcx4"
-    playlist = (
-        "https://www.youtube.com/playlist?list=PLteWjpkbvj7rUU5SFt2BlNVCQqkjulPZR"
-    )
+    playlist = "https://www.youtube.com/playlist?list=PLteWjpkbvj7rUU5SFt2BlNVCQqkjulPZR"
 
     test = TestGroup()
     test.url = url

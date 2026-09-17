@@ -121,9 +121,7 @@ def set_logger(logfile=None, verbosity="WARNING", quiet=False):
     LogLevel = loglevel_converter(verbosity)
     formatter = "%(asctime)s:[%(process)d]:[%(levelname)s]: %(message)s"
 
-    logging.basicConfig(
-        level=LogLevel, format=formatter, datefmt="%a %b %d %H:%M:%S CST %Y"
-    )
+    logging.basicConfig(level=LogLevel, format=formatter, datefmt="%a %b %d %H:%M:%S CST %Y")
 
     logger = logging.getLogger(__name__)
     logger.handlers = []
@@ -131,9 +129,7 @@ def set_logger(logfile=None, verbosity="WARNING", quiet=False):
 
     # new file handler
     if logfile:
-        handler = logging.FileHandler(
-            filename=logfile, mode="a+", encoding="utf-8", delay=True
-        )
+        handler = logging.FileHandler(filename=logfile, mode="a+", encoding="utf-8", delay=True)
         handler.setLevel(LogLevel)
         # set logging format
         formatter = logging.Formatter(formatter)
@@ -285,9 +281,7 @@ def download_file(
     logger = set_logger(logfile=logfile, verbosity=verbosity, quiet=quiet)
 
     if not url:
-        logger.critical(
-            "Target URL = [%s] not identified ! Skip downloading this time", url
-        )
+        logger.critical("Target URL = [%s] not identified ! Skip downloading this time", url)
         return False
 
     hdr = {
@@ -325,9 +319,7 @@ def download_file(
             code = response.getcode()
             logger.info("Http Return Code = [{}]".format(code))
             if code != 200:
-                logger.error(
-                    "[{}] IS CURRENTLY NOT AVAILABLE \n {}".format(url, response.read())
-                )
+                logger.error("[{}] IS CURRENTLY NOT AVAILABLE \n {}".format(url, response.read()))
             size = response.length
             logger.info("File Size = [{}]".format(size))
             break
@@ -415,9 +407,7 @@ def download_file(
 
 def unitest():
     print("Testng wiht No URL")
-    filename = download_file(
-        url=None, replace=False, logfile="skr.log", verbosity="debug"
-    )
+    filename = download_file(url=None, replace=False, logfile="skr.log", verbosity="debug")
     log_filename = datetime.datetime.now().strftime("download_%Y-%m-%d_%H_%M_%S.log")
     # print("Testing with 10MB file")
     # url = "http://download.thinkbroadband.com/10MB.zip"
