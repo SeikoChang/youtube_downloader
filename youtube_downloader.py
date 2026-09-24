@@ -138,11 +138,9 @@ def get_arguments():
         nargs="?",
         const=True,
         default=True,
-        help=(
-            "identify if replace the existed file with the same filename \
+        help=("identify if replace the existed file with the same filename \
             or download new file with prefix file name, \
-            this only be taken when skip = False"
-        ),
+            this only be taken when skip = False"),
     )
 
     parser.add_argument(
@@ -225,10 +223,8 @@ def get_arguments():
         "-cap",
         "--caption",
         action="store_false",
-        help=(
-            "download all available caption for all languages if available \
-             or download specific language caption only"
-        ),
+        help=("download all available caption for all languages if available \
+             or download specific language caption only"),
     )
 
     parser.add_argument(
